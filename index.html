@@ -3,743 +3,435 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aplikasi Presensi - SD Negeri 005 Lembah Rewak</title>
-  <!-- Tailwind CSS -->
+  <title>Aplikasi Presensi - SDN 005 Lembah Rewak</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- HTML5 QR Scanner Library -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <!-- QRCode.js untuk rendering ID Card/Cetak -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-    
-    /* Custom Print Styling */
-    @media print {
-      body * { visibility: hidden; }
-      #print-area, #print-area * { visibility: visible; }
-      #print-area { position: absolute; left: 0; top: 0; width: 100%; }
-      .no-print { display: none !important; }
-      .page-break { page-break-after: always; }
-    }
-
-    #qr-reader video {
-      object-fit: cover !important;
-      border-radius: 0.75rem;
-    }
-    
-    .scrollbar-none::-webkit-scrollbar { display: none; }
-    .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+    .nav-active { border-bottom-color: #fbbf24; color: #fbbf24; }
+    @media print { .no-print { display: none !important; } #print-area { display: block !important; } }
+    #qr-reader video { object-fit: cover !important; border-radius: 0.75rem; }
   </style>
 </head>
-<body class="bg-slate-100 min-h-screen flex flex-col text-slate-800">
+<body class="min-h-screen flex flex-col">
 
-  <!-- TOP HEADER -->
-  <header class="bg-indigo-900 text-white shadow-md sticky top-0 z-50 no-print">
+  <header class="bg-indigo-900 text-white shadow-md no-print">
     <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
       <div class="flex items-center space-x-3">
-        <div class="bg-white p-2 rounded-full text-indigo-900 font-bold w-10 h-10 flex items-center justify-center shadow">
-          <i class="fa-solid fa-school text-lg"></i>
+        <div class="bg-white p-2 rounded-full text-indigo-900 w-10 h-10 flex items-center justify-center shadow">
+          <i class="fa-solid fa-school"></i>
         </div>
         <div>
-          <h1 class="font-bold text-base md:text-lg leading-tight">SD NEGERI 005 LEMBAH REWAK</h1>
-          <p class="text-xs text-indigo-200 uppercase tracking-wider">Presensi Digital Peserta Didik</p>
+          <h1 class="font-bold text-sm md:text-lg">SD NEGERI 005 LEMBAH REWAK</h1>
+          <p class="text-[10px] text-indigo-200 uppercase tracking-widest">Presensi Digital Peserta Didik</p>
         </div>
       </div>
-      <div class="hidden md:flex items-center space-x-2 text-xs bg-indigo-800 px-3 py-1.5 rounded-lg border border-indigo-700">
-        <i class="fa-solid fa-clock text-amber-400"></i>
+      <div class="text-xs bg-indigo-800 px-3 py-1.5 rounded-lg border border-indigo-700">
         <span id="live-clock">--:--:-- WIB</span>
       </div>
     </div>
   </header>
 
-  <!-- NAVIGATION BAR -->
-  <nav class="bg-indigo-800 text-white border-b border-indigo-700 sticky top-[60px] z-40 shadow-sm no-print">
-    <div class="max-w-7xl mx-auto px-2 flex overflow-x-auto text-sm font-medium scrollbar-none">
-      <button onclick="switchTab('scan')" id="tab-scan" class="nav-btn px-4 py-3 border-b-2 border-amber-400 text-amber-400 flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-qrcode"></i><span>Scan QR</span>
+  <nav class="bg-indigo-800 text-white sticky top-0 z-40 shadow-sm no-print overflow-x-auto whitespace-nowrap">
+    <div class="max-w-7xl mx-auto px-2 flex text-sm font-medium">
+      <button onclick="switchTab('scan')" id="tab-scan" class="nav-btn px-4 py-3 border-b-2 border-transparent hover:text-amber-300 transition nav-active">
+        <i class="fa-solid fa-qrcode mr-1"></i> Scan QR
       </button>
-      <button onclick="switchTab('dashboard')" id="tab-dashboard" class="nav-btn px-4 py-3 border-b-2 border-transparent text-indigo-200 hover:text-white flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-chart-pie"></i><span>Dashboard</span>
+      <button onclick="switchTab('dashboard')" id="tab-dashboard" class="nav-btn px-4 py-3 border-b-2 border-transparent hover:text-amber-300 transition">
+        <i class="fa-solid fa-chart-pie mr-1"></i> Dashboard
       </button>
-      <button onclick="switchTab('presensi')" id="tab-presensi" class="nav-btn px-4 py-3 border-b-2 border-transparent text-indigo-200 hover:text-white flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-clipboard-user"></i><span>Data Presensi</span>
+      <button onclick="switchTab('siswa')" id="tab-siswa" class="nav-btn px-4 py-3 border-b-2 border-transparent hover:text-amber-300 transition">
+        <i class="fa-solid fa-users mr-1"></i> Siswa
       </button>
-      <button onclick="switchTab('rekap')" id="tab-rekap" class="nav-btn px-4 py-3 border-b-2 border-transparent text-indigo-200 hover:text-white flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-file-invoice"></i><span>Rekap Laporan</span>
+      <button onclick="switchTab('rekap')" id="tab-rekap" class="nav-btn px-4 py-3 border-b-2 border-transparent hover:text-amber-300 transition">
+        <i class="fa-solid fa-file-lines mr-1"></i> Rekap
       </button>
-      <button onclick="switchTab('siswa')" id="tab-siswa" class="nav-btn px-4 py-3 border-b-2 border-transparent text-indigo-200 hover:text-white flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-users"></i><span>Siswa</span>
+      <button onclick="switchTab('cetak-qr')" id="tab-cetak-qr" class="nav-btn px-4 py-3 border-b-2 border-transparent hover:text-amber-300 transition">
+        <i class="fa-solid fa-print mr-1"></i> Cetak
       </button>
-      <button onclick="switchTab('cetak-qr')" id="tab-cetak-qr" class="nav-btn px-4 py-3 border-b-2 border-transparent text-indigo-200 hover:text-white flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-print"></i><span>Cetak QR</span>
-      </button>
-      <button onclick="switchTab('settings')" id="tab-settings" class="nav-btn px-4 py-3 border-b-2 border-transparent text-indigo-200 hover:text-white flex items-center space-x-2 whitespace-nowrap">
-        <i class="fa-solid fa-gear"></i><span>Pengaturan</span>
+      <button onclick="switchTab('settings')" id="tab-settings" class="nav-btn px-4 py-3 border-b-2 border-transparent hover:text-amber-300 transition">
+        <i class="fa-solid fa-gear mr-1"></i> Pengaturan
       </button>
     </div>
   </nav>
 
-  <!-- MAIN CONTENT CONTAINER -->
-  <main class="flex-grow max-w-7xl w-full mx-auto p-3 md:p-6 no-print">
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 no-print">
 
-    <!-- TAB 1: SCAN QR CODE -->
-    <section id="page-scan" class="tab-content space-y-6">
+    <!-- PAGE: SCAN -->
+    <section id="page-scan" class="tab-content block animate-fadeIn">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <div class="lg:col-span-7 bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center">
-          <div class="w-full flex justify-between items-center mb-4">
-            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <i class="fa-solid fa-camera text-indigo-600"></i> SCAN QR SISWA
-            </h2>
-            <span id="camera-status" class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">Kamera Siap</span>
+        <div class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="font-bold text-slate-800"><i class="fa-solid fa-camera text-indigo-600 mr-2"></i>PEMINDAI QR</h2>
+            <select id="camera-select" class="text-xs p-1 border rounded bg-slate-50 focus:outline-none"></select>
           </div>
-
-          <div class="relative w-full max-w-md aspect-square bg-slate-900 rounded-xl overflow-hidden shadow-inner flex items-center justify-center border-2 border-slate-300">
-            <div id="qr-reader" class="w-full h-full"></div>
-            <div id="scanner-overlay" class="absolute inset-0 pointer-events-none flex flex-col items-center justify-center border-2 border-indigo-400/40 rounded-xl m-4">
-              <div class="w-48 h-48 border-2 border-dashed border-amber-400/80 rounded-lg animate-pulse"></div>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap gap-3 mt-4 w-full justify-center max-w-md">
-            <button id="btn-start-scan" onclick="startScanner()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center gap-2 text-sm">
-              <i class="fa-solid fa-play"></i> Mulai Scan
-            </button>
-            <button id="btn-stop-scan" onclick="stopScanner()" class="flex-1 bg-slate-600 hover:bg-slate-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center gap-2 text-sm">
-              <i class="fa-solid fa-stop"></i> Hentikan
-            </button>
-            <select id="camera-select" class="w-full mt-2 p-2 border rounded-xl text-xs bg-slate-50 text-slate-700 focus:outline-none">
-              <option value="">Pilih Kamera...</option>
-            </select>
+          <div id="qr-reader" class="w-full aspect-square bg-slate-900 rounded-xl overflow-hidden border-4 border-slate-100 shadow-inner"></div>
+          <div class="flex gap-3 mt-4">
+            <button onclick="startScanner()" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition active:scale-95">MULAI SCAN</button>
+            <button onclick="stopScanner()" class="bg-slate-600 text-white px-6 rounded-xl font-bold hover:bg-slate-700 transition">BERHENTI</button>
           </div>
         </div>
 
-        <div class="lg:col-span-5 flex flex-col gap-4">
-          <div id="result-card" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 min-h-[300px] flex flex-col justify-center items-center text-center transition-all duration-300">
-            <div id="result-icon" class="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-3xl mb-4">
+        <div class="lg:col-span-5 space-y-4">
+          <div id="result-card" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center transition-all duration-500 min-h-[350px]">
+            <div id="res-icon" class="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-3xl mb-4 text-slate-300">
               <i class="fa-solid fa-qrcode"></i>
             </div>
-            <h3 id="result-title" class="text-xl font-bold text-slate-700 mb-1">Siap Memindai</h3>
-            <p id="result-subtitle" class="text-slate-500 text-sm max-w-xs mb-4">Dekatkan QR Code siswa pada kamera untuk mencatat presensi.</p>
-
-            <div id="result-details" class="hidden w-full bg-slate-50 p-4 rounded-xl border border-slate-200 text-left space-y-2 text-xs md:text-sm">
-              <div class="flex justify-between border-b pb-1">
-                <span class="text-slate-500">Nama Siswa</span>
-                <span id="res-nama" class="font-bold text-slate-800">--</span>
-              </div>
-              <div class="flex justify-between border-b pb-1">
-                <span class="text-slate-500">ID Siswa</span>
-                <span id="res-id" class="font-semibold text-slate-700 font-mono">--</span>
-              </div>
-              <div class="flex justify-between border-b pb-1">
-                <span class="text-slate-500">Kelas</span>
-                <span id="res-kelas" class="font-bold text-indigo-700">--</span>
-              </div>
-              <div class="flex justify-between border-b pb-1">
-                <span class="text-slate-500">Jam Masuk</span>
-                <span id="res-waktu" class="font-medium text-slate-700">--</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-slate-500">Status</span>
-                <span id="res-status" class="px-2 py-0.5 rounded text-xs font-bold bg-slate-200">--</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex-grow">
-            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Presensi Terakhir</h4>
-            <div id="recent-scan-list" class="space-y-2 overflow-y-auto max-h-48 text-xs">
-              <p class="text-center text-slate-400 py-4">Belum ada aktivitas.</p>
+            <h3 id="res-title" class="text-xl font-bold text-slate-700">Siap Memindai</h3>
+            <p id="res-msg" class="text-slate-400 text-sm mt-2">Arahkan QR Code siswa ke kamera</p>
+            
+            <div id="res-details" class="hidden w-full mt-6 space-y-2 text-left bg-slate-50 p-4 rounded-xl border border-slate-100">
+              <div class="flex justify-between text-xs border-b pb-1"><span class="text-slate-500">Nama</span><span id="det-nama" class="font-bold text-slate-800">--</span></div>
+              <div class="flex justify-between text-xs border-b pb-1"><span class="text-slate-500">ID Siswa</span><span id="det-id" class="font-mono text-indigo-600">--</span></div>
+              <div class="flex justify-between text-xs border-b pb-1"><span class="text-slate-500">Waktu</span><span id="det-jam" class="font-medium">--</span></div>
+              <div class="flex justify-between text-xs"><span class="text-slate-500">Status</span><span id="det-status" class="px-2 py-0.5 rounded font-bold uppercase text-[10px]">--</span></div>
             </div>
           </div>
         </div>
-
       </div>
     </section>
 
-    <!-- TAB 2: DASHBOARD -->
-    <section id="page-dashboard" class="tab-content hidden space-y-6">
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
+    <!-- PAGE: DASHBOARD -->
+    <section id="page-dashboard" class="tab-content hidden">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
           <p class="text-[10px] font-bold text-slate-500 uppercase">Total Siswa</p>
-          <p id="stat-total" class="text-2xl font-extrabold text-slate-800 mt-1">0</p>
+          <p id="stat-total" class="text-2xl font-black text-slate-800">0</p>
         </div>
-        <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-sm text-center">
-          <p class="text-[10px] font-bold text-emerald-700 uppercase">Hadir</p>
-          <p id="stat-hadir" class="text-2xl font-extrabold text-emerald-700 mt-1">0</p>
+        <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 shadow-sm text-center">
+          <p class="text-[10px] font-bold text-emerald-600 uppercase">Hadir</p>
+          <p id="stat-hadir" class="text-2xl font-black text-emerald-600">0</p>
         </div>
-        <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 shadow-sm text-center">
-          <p class="text-[10px] font-bold text-amber-700 uppercase">Terlambat</p>
-          <p id="stat-terlambat" class="text-2xl font-extrabold text-amber-700 mt-1">0</p>
+        <div class="bg-amber-50 p-4 rounded-2xl border border-amber-100 shadow-sm text-center">
+          <p class="text-[10px] font-bold text-amber-600 uppercase">Terlambat</p>
+          <p id="stat-terlambat" class="text-2xl font-black text-amber-600">0</p>
         </div>
-        <div class="bg-blue-50 p-4 rounded-xl border border-blue-200 shadow-sm text-center">
-          <p class="text-[10px] font-bold text-blue-700 uppercase">Izin/Sakit</p>
-          <p id="stat-izin" class="text-2xl font-extrabold text-blue-700 mt-1">0</p>
+        <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100 shadow-sm text-center">
+          <p class="text-[10px] font-bold text-blue-600 uppercase">Izin/Sakit</p>
+          <p id="stat-izin" class="text-2xl font-black text-blue-600">0</p>
         </div>
-        <div class="bg-rose-50 p-4 rounded-xl border border-rose-200 shadow-sm text-center">
-          <p class="text-[10px] font-bold text-rose-700 uppercase">Alpa</p>
-          <p id="stat-alpa" class="text-2xl font-extrabold text-rose-700 mt-1">0</p>
+        <div class="bg-rose-50 p-4 rounded-2xl border border-rose-100 shadow-sm text-center">
+          <p class="text-[10px] font-bold text-rose-600 uppercase">Alpa</p>
+          <p id="stat-alpa" class="text-2xl font-black text-rose-600">0</p>
         </div>
-        <div class="bg-slate-100 p-4 rounded-xl border border-slate-300 shadow-sm text-center">
-          <p class="text-[10px] font-bold text-slate-600 uppercase">Belum Absen</p>
-          <p id="stat-belum" class="text-2xl font-extrabold text-slate-700 mt-1">0</p>
+        <div class="bg-slate-100 p-4 rounded-2xl border shadow-sm text-center">
+          <p class="text-[10px] font-bold text-slate-500 uppercase">Belum Absen</p>
+          <p id="stat-belum" class="text-2xl font-black text-slate-600">0</p>
         </div>
       </div>
-
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 overflow-hidden">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border overflow-hidden">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-base font-bold text-slate-800">Daftar Presensi Hari Ini</h3>
-          <button onclick="fetchDashboardData()" class="text-indigo-600 text-xs font-semibold hover:underline">
-            <i class="fa-solid fa-rotate"></i> Refresh Data
-          </button>
+          <h3 class="font-bold text-slate-800">Log Aktivitas Hari Ini</h3>
+          <button onclick="fetchDashboard()" class="text-indigo-600 text-xs font-bold hover:underline"><i class="fa-solid fa-sync mr-1"></i> REFRESH DATA</button>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse text-xs md:text-sm">
-            <thead>
-              <tr class="bg-slate-50 text-slate-500 border-b">
-                <th class="p-3">Waktu</th>
-                <th class="p-3">Nama Siswa</th>
-                <th class="p-3">Kelas</th>
-                <th class="p-3">Status</th>
-                <th class="p-3">Metode</th>
-              </tr>
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 text-slate-500 uppercase font-bold">
+              <tr><th class="p-3">Waktu</th><th class="p-3">Nama Siswa</th><th class="p-3">Kelas</th><th class="p-3 text-center">Status</th></tr>
             </thead>
-            <tbody id="dash-table-body" class="divide-y divide-slate-100">
-              <tr><td colspan="5" class="text-center py-10 text-slate-400">Memuat data...</td></tr>
+            <tbody id="dash-tbody" class="divide-y divide-slate-100">
+              <tr><td colspan="4" class="p-10 text-center text-slate-400">Memuat data...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- TAB 3: DATA PRESENSI & MANUAL -->
-    <section id="page-presensi" class="tab-content hidden space-y-6">
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6">
-        <h3 class="text-base font-bold text-slate-800 mb-4">Input Presensi Manual (Izin/Sakit/Alpa)</h3>
-        <form id="form-manual-presensi" onsubmit="handleManualSubmit(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Siswa</label>
-            <select id="manual-student-id" required class="w-full text-xs p-2.5 border rounded-xl bg-slate-50 focus:ring-2 focus:ring-indigo-500">
-              <option value="">-- Pilih Siswa --</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
-            <select id="manual-status" required class="w-full text-xs p-2.5 border rounded-xl bg-slate-50">
-              <option value="IZIN">IZIN</option>
-              <option value="SAKIT">SAKIT</option>
-              <option value="ALPA">ALPA</option>
-              <option value="HADIR">HADIR (Manual)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Keterangan</label>
-            <input type="text" id="manual-keterangan" placeholder="Alasan/Catatan" class="w-full text-xs p-2.5 border rounded-xl">
-          </div>
-          <div class="flex items-end">
-            <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2.5 rounded-xl text-xs hover:bg-indigo-700 transition">
-              Simpan Presensi
-            </button>
-          </div>
-        </form>
-      </div>
-    </section>
-
-    <!-- TAB 4: REKAP LAPORAN -->
-    <section id="page-rekap" class="tab-content hidden space-y-6">
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <h3 class="text-base font-bold text-slate-800">Rekapitulasi Presensi</h3>
-          <button onclick="window.print()" class="bg-emerald-600 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow hover:bg-emerald-700">
-            <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6 bg-slate-50 p-4 rounded-xl border">
-          <div>
-            <label class="block text-[11px] font-bold text-slate-600 mb-1">Tanggal</label>
-            <input type="date" id="filter-date" class="w-full text-xs p-2 border rounded-lg">
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-slate-600 mb-1">Kelas</label>
-            <select id="filter-class" class="w-full text-xs p-2 border rounded-lg">
-              <option value="">Semua Kelas</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-[11px] font-bold text-slate-600 mb-1">Status</label>
-            <select id="filter-status" class="w-full text-xs p-2 border rounded-lg">
-              <option value="">Semua Status</option>
-              <option value="HADIR">HADIR</option>
-              <option value="TERLAMBAT">TERLAMBAT</option>
-              <option value="IZIN">IZIN</option>
-              <option value="SAKIT">SAKIT</option>
-              <option value="ALPA">ALPA</option>
-            </select>
-          </div>
-          <div class="flex items-end">
-            <button onclick="loadRekapData()" class="w-full bg-indigo-600 text-white text-xs font-medium py-2 rounded-lg">
-              Tampilkan Filter
-            </button>
-          </div>
-        </div>
-
-        <div id="rekap-print-area" class="overflow-x-auto">
-          <div class="text-center my-4 hidden print-header">
-            <h2 class="font-bold text-lg">LAPORAN PRESENSI PESERTA DIDIK</h2>
-            <h3 class="text-md">SD NEGERI 005 LEMBAH REWAK</h3>
-            <hr class="my-2 border-slate-300">
-          </div>
-          <table class="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr class="bg-slate-100 text-slate-700 border-b">
-                <th class="p-2 border">No</th>
-                <th class="p-2 border">Tanggal</th>
-                <th class="p-2 border">Waktu</th>
-                <th class="p-2 border">ID</th>
-                <th class="p-2 border">Nama Siswa</th>
-                <th class="p-2 border">Kelas</th>
-                <th class="p-2 border">Status</th>
-                <th class="p-2 border">Keterangan</th>
-              </tr>
-            </thead>
-            <tbody id="rekap-table-body" class="divide-y divide-slate-200">
-              <tr><td colspan="8" class="text-center py-6 text-slate-400">Silakan gunakan filter untuk melihat data.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB 5: DATA SISWA -->
-    <section id="page-siswa" class="tab-content hidden space-y-6">
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <h3 class="text-base font-bold text-slate-800">Master Data Siswa</h3>
-          <button onclick="openStudentModal()" class="bg-indigo-600 text-white text-xs font-semibold py-2.5 px-4 rounded-xl shadow flex items-center gap-2">
-            <i class="fa-solid fa-plus"></i> Tambah Siswa
-          </button>
+    <!-- PAGE: SISWA -->
+    <section id="page-siswa" class="tab-content hidden">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="font-bold text-slate-800">Data Master Siswa</h3>
+          <button onclick="openModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-indigo-700 shadow-md">TAMBAH SISWA</button>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse text-xs md:text-sm">
-            <thead>
-              <tr class="bg-slate-50 text-slate-500 border-b">
-                <th class="p-3">ID Siswa</th>
-                <th class="p-3">NISN</th>
-                <th class="p-3">Nama</th>
-                <th class="p-3">Kelas</th>
-                <th class="p-3">Ortu</th>
-                <th class="p-3">Status</th>
-                <th class="p-3 text-center">Aksi</th>
-              </tr>
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-50 text-slate-500 border-b">
+              <tr><th class="p-3">ID</th><th class="p-3">Nama Siswa</th><th class="p-3">Kelas</th><th class="p-3">WA Ortu</th><th class="p-3 text-center">Aksi</th></tr>
             </thead>
-            <tbody id="siswa-table-body" class="divide-y divide-slate-100">
-              <tr><td colspan="7" class="text-center py-10 text-slate-400">Memuat data...</td></tr>
-            </tbody>
+            <tbody id="siswa-tbody" class="divide-y divide-slate-100"></tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- TAB 6: CETAK QR CODE -->
-    <section id="page-cetak-qr" class="tab-content hidden space-y-6">
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 no-print">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-          <h3 class="text-base font-bold text-slate-800">Cetak Kartu QR Siswa</h3>
-          <div class="flex items-center gap-2">
-            <select id="cetak-filter-kelas" onchange="renderQRCards()" class="text-xs p-2 border rounded-xl bg-slate-50">
-              <option value="">Semua Kelas</option>
-            </select>
-            <button onclick="window.print()" class="bg-indigo-600 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow">
-              <i class="fa-solid fa-print"></i> Cetak Kartu
-            </button>
-          </div>
+    <!-- PAGE: REKAP -->
+    <section id="page-rekap" class="tab-content hidden">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <input type="date" id="filter-date" class="p-2 border rounded-lg text-xs">
+          <select id="filter-class" class="p-2 border rounded-lg text-xs"><option value="">Semua Kelas</option></select>
+          <button onclick="fetchRekap()" class="bg-indigo-600 text-white font-bold py-2 rounded-lg text-xs hover:bg-indigo-700">TAMPILKAN REKAP</button>
+          <button onclick="window.print()" class="bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs hover:bg-emerald-700">CETAK PDF</button>
         </div>
-      </div>
-      <div id="print-area" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <!-- Rendered dynamically -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-[10px] text-left border">
+            <thead class="bg-slate-100 text-slate-600 font-bold border-b">
+              <tr><th class="p-2 border">Tanggal</th><th class="p-2 border">Nama</th><th class="p-2 border">Kelas</th><th class="p-2 border text-center">Status</th><th class="p-2 border">Petugas</th></tr>
+            </thead>
+            <tbody id="rekap-tbody" class="divide-y"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
-    <!-- TAB 7: PENGATURAN -->
-    <section id="page-settings" class="tab-content hidden space-y-6">
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 max-w-2xl mx-auto">
-        <h3 class="text-base font-bold text-slate-800 mb-4">Konfigurasi Sistem</h3>
-        <form id="form-settings" onsubmit="saveSettings(event)" class="space-y-4 text-xs md:text-sm">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Apps Script API URL</label>
-            <input type="url" id="cfg-api-url" required placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-2.5 border rounded-xl font-mono text-[11px]">
-            <p class="text-[10px] text-slate-500 mt-1">Masukkan URL Web App hasil deploy Google Apps Script.</p>
-          </div>
-          <div class="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block font-semibold text-slate-700 mb-1">Jam Masuk</label>
-              <input type="time" id="cfg-jam-masuk" value="06:45" class="w-full p-2.5 border rounded-xl">
-            </div>
-            <div>
-              <label class="block font-semibold text-slate-700 mb-1">Batas Tepat Waktu</label>
-              <input type="time" id="cfg-batas-tepat" value="07:15" class="w-full p-2.5 border rounded-xl">
-            </div>
-          </div>
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Status Notifikasi WA</label>
-            <select id="cfg-wa-active" class="w-full p-2.5 border rounded-xl bg-slate-50">
-              <option value="TIDAK">NONAKTIF</option>
-              <option value="YA">AKTIF (Official API)</option>
-            </select>
-          </div>
-          <div class="pt-2">
-            <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2.5 rounded-xl shadow hover:bg-indigo-700 transition">
-              Simpan Pengaturan
-            </button>
-          </div>
-        </form>
+    <!-- PAGE: SETTINGS -->
+    <section id="page-settings" class="tab-content hidden max-w-xl mx-auto">
+      <div class="bg-white p-8 rounded-2xl shadow-sm border space-y-6">
+        <h3 class="font-bold text-slate-800 border-b pb-3">Konfigurasi Sistem</h3>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-2">APPS SCRIPT API URL</label>
+          <input type="url" id="config-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-3 bg-slate-50 border rounded-xl text-xs font-mono">
+          <p class="text-[10px] text-slate-400 mt-1">*Pastikan URL Web App sudah dideploy sebagai 'Anyone'.</p>
+        </div>
+        <button onclick="saveSettings()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100">SIMPAN PENGATURAN</button>
       </div>
+    </section>
+
+    <!-- PAGE: CETAK QR -->
+    <section id="page-cetak-qr" class="tab-content hidden">
+      <div id="print-area" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
     </section>
 
   </main>
 
-  <!-- MODAL: ADD/EDIT SISWA -->
-  <div id="student-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
-      <div class="flex justify-between items-center border-b pb-3">
-        <h3 id="modal-student-title" class="font-bold text-slate-800">Tambah Data Siswa</h3>
-        <button onclick="closeStudentModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <form id="form-student" onsubmit="handleStudentForm(event)" class="space-y-3 text-xs">
-        <div>
-          <label class="block font-semibold text-slate-600 mb-1">ID Siswa (Unik)</label>
-          <input type="text" id="m-id-siswa" required placeholder="Contoh: SD005-001" class="w-full p-2 border rounded-lg">
+  <footer class="bg-slate-800 text-slate-400 py-6 text-center text-[10px] mt-auto no-print">
+    <p>&copy; 2026 SD Negeri 005 Lembah Rewak. Versi Perbaikan v1.1</p>
+  </footer>
+
+  <!-- MODAL: ADD SISWA -->
+  <div id="student-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50 no-print">
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
+      <h3 id="modal-title" class="font-bold text-slate-800 mb-4 text-lg">Tambah Siswa Baru</h3>
+      <form id="student-form" onsubmit="saveStudent(event)" class="space-y-4 text-xs">
+        <input type="hidden" id="form-mode" value="add">
+        <div><label class="block mb-1 font-bold">ID Siswa (Unik)</label><input type="text" id="m-id" required class="w-full p-2 border rounded-lg"></div>
+        <div><label class="block mb-1 font-bold">NISN</label><input type="text" id="m-nisn" required class="w-full p-2 border rounded-lg"></div>
+        <div><label class="block mb-1 font-bold">Nama Lengkap</label><input type="text" id="m-nama" required class="w-full p-2 border rounded-lg"></div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="block mb-1 font-bold">Kelas</label><input type="text" id="m-kelas" required class="w-full p-2 border rounded-lg"></div>
+          <div><label class="block mb-1 font-bold">Gender</label><select id="m-jk" class="w-full p-2 border rounded-lg"><option value="L">Laki-Laki</option><option value="P">Perempuan</option></select></div>
         </div>
-        <div>
-          <label class="block font-semibold text-slate-600 mb-1">NISN</label>
-          <input type="text" id="m-nisn" required class="w-full p-2 border rounded-lg">
-        </div>
-        <div>
-          <label class="block font-semibold text-slate-600 mb-1">Nama Lengkap</label>
-          <input type="text" id="m-nama" required class="w-full p-2 border rounded-lg">
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block font-semibold text-slate-600 mb-1">Kelas</label>
-            <input type="text" id="m-kelas" required class="w-full p-2 border rounded-lg">
-          </div>
-          <div>
-            <label class="block font-semibold text-slate-600 mb-1">Jenis Kelamin</label>
-            <select id="m-jk" class="w-full p-2 border rounded-lg">
-              <option value="L">Laki-Laki</option>
-              <option value="P">Perempuan</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label class="block font-semibold text-slate-600 mb-1">WhatsApp Ortu (628...)</label>
-          <input type="text" id="m-wa" placeholder="62812..." class="w-full p-2 border rounded-lg">
-        </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeStudentModal()" class="px-4 py-2 border rounded-lg">Batal</button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg">Simpan</button>
+        <div><label class="block mb-1 font-bold">WA Orang Tua (Format: 628...)</label><input type="text" id="m-wa" class="w-full p-2 border rounded-lg"></div>
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 border rounded-lg font-bold">Batal</button>
+          <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700">Simpan</button>
         </div>
       </form>
     </div>
   </div>
 
-  <footer class="bg-slate-800 text-slate-400 text-[10px] py-4 text-center border-t border-slate-700 mt-auto no-print">
-    <p>&copy; 2026 SD Negeri 005 Lembah Rewak. Sistem Presensi QR Code v1.0</p>
-  </footer>
-
   <script>
-    let API_URL = localStorage.getItem('SD005_API_URL') || '';
-    let html5QrCode = null;
-    let isScanning = false;
-    let scanCooldown = false;
-    let studentsData = [];
-    let todayAttendanceData = [];
+    let API_URL = localStorage.getItem('SDN005_API') || "";
+    let scanner = null;
+    let scanLock = false;
+    let masterStudents = [];
 
     // CLOCK
     setInterval(() => {
-      const now = new Date();
-      document.getElementById('live-clock').innerText = now.toLocaleTimeString('id-ID') + ' WIB';
+      document.getElementById('live-clock').innerText = new Date().toLocaleTimeString('id-ID') + ' WIB';
     }, 1000);
 
-    // APP INIT
-    window.addEventListener('DOMContentLoaded', () => {
-      if (API_URL) {
-        document.getElementById('cfg-api-url').value = API_URL;
-        initData();
-      } else {
-        switchTab('settings');
-        alert('Silakan masukkan API URL di menu Pengaturan.');
-      }
-      initCameraList();
-    });
+    // INIT
+    window.onload = () => {
+      if(!API_URL) { switchTab('settings'); alert("Silakan masukkan URL API terlebih dahulu!"); }
+      else { fetchMaster(); fetchDashboard(); }
+      initCamera();
+    };
 
-    // NAVIGATION
-    function switchTab(tabId) {
-      document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('border-amber-400', 'text-amber-400');
-        btn.classList.add('border-transparent', 'text-indigo-200');
-      });
-      document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
-
-      const activeBtn = document.getElementById('tab-' + tabId);
-      const activePage = document.getElementById('page-' + tabId);
-      
-      if (activeBtn) {
-        activeBtn.classList.remove('border-transparent', 'text-indigo-200');
-        activeBtn.classList.add('border-amber-400', 'text-amber-400');
-      }
-      if (activePage) activePage.classList.remove('hidden');
-
-      if (tabId !== 'scan' && isScanning) stopScanner();
-      if (tabId === 'dashboard') fetchDashboardData();
-      if (tabId === 'cetak-qr') renderQRCards();
+    function switchTab(id) {
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('nav-active'));
+      document.getElementById('page-'+id).classList.remove('hidden');
+      document.getElementById('tab-'+id).classList.add('nav-active');
+      if(id === 'scan') startScanner(); else stopScanner();
+      if(id === 'cetak-qr') renderCards();
     }
 
-    // BACKEND API CALL
-    async function apiCall(action, payload = {}) {
-      if (!API_URL) return { success: false, message: 'API URL Kosong!' };
+    async function callBackend(action, payload = {}) {
+      if(!API_URL) return {success: false, message: "API URL belum diset!"};
       try {
-        const response = await fetch(API_URL, {
+        const resp = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action, ...payload })
+          headers: {'Content-Type': 'text/plain;charset=utf-8'},
+          body: JSON.stringify({action, ...payload})
         });
-        return await response.json();
-      } catch (err) {
-        console.error(err);
-        return { success: false, message: 'Gagal terhubung ke server.' };
-      }
-    }
-
-    async function initData() {
-      const res = await apiCall('getStudents');
-      if (res && res.success) {
-        studentsData = res.data || [];
-        populateStudentSelects();
-        populateClassFilters();
-        renderSiswaTable();
-      }
-      fetchDashboardData();
-    }
-
-    function populateStudentSelects() {
-      const select = document.getElementById('manual-student-id');
-      select.innerHTML = '<option value="">-- Pilih Siswa --</option>';
-      studentsData.forEach(s => {
-        select.innerHTML += `<option value="${s.ID_SISWA}">${s.NAMA} (${s.KELAS})</option>`;
-      });
-    }
-
-    function populateClassFilters() {
-      const classes = [...new Set(studentsData.map(s => s.KELAS))].sort();
-      let opt = '<option value="">Semua Kelas</option>';
-      classes.forEach(c => opt += `<option value="${c}">Kelas ${c}</option>`);
-      document.getElementById('filter-class').innerHTML = opt;
-      document.getElementById('cetak-filter-kelas').innerHTML = opt;
-    }
-
-    // SCANNER
-    async function initCameraList() {
-      try {
-        const devices = await Html5Qrcode.getCameras();
-        const select = document.getElementById('camera-select');
-        if (devices && devices.length) {
-          devices.forEach(dev => {
-            select.innerHTML += `<option value="${dev.id}">${dev.label}</option>`;
-          });
-        }
+        return await resp.json();
       } catch (e) {
-        document.getElementById('camera-status').innerText = 'Kamera tidak ditemukan';
+        return {success: false, message: "Koneksi ke Server Gagal."};
       }
+    }
+
+    async function initCamera() {
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        const select = document.getElementById('camera-select');
+        cameras.forEach(c => select.innerHTML += `<option value="${c.id}">${c.label}</option>`);
+      } catch(e) {}
     }
 
     function startScanner() {
-      if (isScanning) return;
-      const selectedCam = document.getElementById('camera-select').value;
-      html5QrCode = new Html5Qrcode("qr-reader");
-      const config = { fps: 10, qrbox: 250 };
-      const cameraId = selectedCam ? { deviceId: selectedCam } : { facingMode: "environment" };
-
-      html5QrCode.start(cameraId, config, onScanSuccess, onScanFailure)
-      .then(() => {
-        isScanning = true;
-        document.getElementById('camera-status').innerText = 'Scanning...';
-      }).catch(err => alert("Izin kamera ditolak: " + err));
+      if(scanner) return;
+      scanner = new Html5Qrcode("qr-reader");
+      const camId = document.getElementById('camera-select').value || {facingMode: "environment"};
+      scanner.start(camId, {fps: 10, qrbox: 250}, onScan);
     }
 
     function stopScanner() {
-      if (html5QrCode && isScanning) {
-        html5QrCode.stop().then(() => { isScanning = false; document.getElementById('camera-status').innerText = 'Berhenti'; });
-      }
+      if(scanner) { scanner.stop().then(() => scanner = null); }
     }
 
-    async function onScanSuccess(decodedText) {
-      if (scanCooldown) return;
-      scanCooldown = true;
-
-      const res = await apiCall('recordAttendance', { studentId: decodedText, petugas: 'Petugas Sekolah' });
+    async function onScan(code) {
+      if(scanLock) return;
+      scanLock = true;
       
+      const res = await callBackend('recordAttendance', {studentId: code, petugas: 'Admin Sekolah'});
+      updateUIResult(res);
+      
+      // Auto-update dashboard in background
+      if(res.success) fetchDashboard();
+
+      setTimeout(() => { scanLock = false; }, 3000);
+    }
+
+    function updateUIResult(res) {
       const card = document.getElementById('result-card');
-      const details = document.getElementById('result-details');
-      details.classList.remove('hidden');
+      const icon = document.getElementById('res-icon');
+      const details = document.getElementById('res-details');
 
-      if (res && res.success) {
-        card.className = "bg-white p-6 rounded-2xl shadow-md border-2 border-emerald-500 flex flex-col justify-center items-center text-center";
-        document.getElementById('result-icon').className = "w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mb-4";
-        document.getElementById('result-icon').innerHTML = '<i class="fa-solid fa-check"></i>';
-        document.getElementById('result-title').innerText = "PRESENSI BERHASIL ✓";
-        document.getElementById('result-subtitle').innerText = res.message;
-
-        const d = res.data;
-        document.getElementById('res-nama').innerText = d.nama;
-        document.getElementById('res-id').innerText = d.id_siswa;
-        document.getElementById('res-kelas').innerText = d.kelas;
-        document.getElementById('res-waktu').innerText = d.waktu;
-        document.getElementById('res-status').innerText = d.status;
-        document.getElementById('res-status').className = `px-2 py-0.5 rounded text-xs font-bold ${d.status === 'HADIR' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`;
-        fetchDashboardData();
+      if(res.success) {
+        card.className = "bg-white p-8 rounded-2xl shadow-xl border-4 border-emerald-500 flex flex-col items-center justify-center text-center transition-all min-h-[350px]";
+        icon.className = "w-24 h-24 rounded-full bg-emerald-100 flex items-center justify-center text-4xl mb-4 text-emerald-600 animate-bounce";
+        icon.innerHTML = '<i class="fa-solid fa-check-double"></i>';
+        document.getElementById('res-title').innerText = "PRESENSI BERHASIL ✓";
+        document.getElementById('res-msg').innerText = res.message;
+        
+        details.classList.remove('hidden');
+        document.getElementById('det-nama').innerText = res.data.nama;
+        document.getElementById('det-id').innerText = res.data.id_siswa;
+        document.getElementById('det-jam').innerText = res.data.waktu;
+        document.getElementById('det-status').innerText = res.data.status;
+        document.getElementById('det-status').className = `px-2 py-0.5 rounded font-bold uppercase text-[10px] ${res.data.status === 'HADIR' ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`;
       } else {
-        card.className = "bg-white p-6 rounded-2xl shadow-md border-2 border-rose-500 flex flex-col justify-center items-center text-center";
-        document.getElementById('result-icon').className = "w-20 h-20 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-3xl mb-4";
-        document.getElementById('result-icon').innerHTML = '<i class="fa-solid fa-xmark"></i>';
-        document.getElementById('result-title').innerText = "GAGAL";
-        document.getElementById('result-subtitle').innerText = res.message;
-      }
-
-      setTimeout(() => { scanCooldown = false; }, 3000);
-    }
-
-    function onScanFailure(error) {}
-
-    // DASHBOARD & STATS
-    async function fetchDashboardData() {
-      const res = await apiCall('getTodayAttendance');
-      if (res && res.success) {
-        const stats = res.stats;
-        document.getElementById('stat-total').innerText = stats.total;
-        document.getElementById('stat-hadir').innerText = stats.hadir;
-        document.getElementById('stat-terlambat').innerText = stats.terlambat;
-        document.getElementById('stat-izin').innerText = stats.izin + stats.sakit;
-        document.getElementById('stat-alpa').innerText = stats.alpa;
-        document.getElementById('stat-belum').innerText = stats.belumHadir;
-
-        renderDashboardTable(res.data);
-        renderRecentScans(res.data);
+        card.className = "bg-white p-8 rounded-2xl shadow-xl border-4 border-rose-500 flex flex-col items-center justify-center text-center transition-all min-h-[350px]";
+        icon.className = "w-24 h-24 rounded-full bg-rose-100 flex items-center justify-center text-4xl mb-4 text-rose-600";
+        icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+        document.getElementById('res-title').innerText = "GAGAL";
+        document.getElementById('res-msg').innerText = res.message;
+        details.classList.add('hidden');
       }
     }
 
-    function renderDashboardTable(data) {
-      const tbody = document.getElementById('dash-table-body');
-      if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-400">Belum ada aktivitas hari ini.</td></tr>'; return; }
-      tbody.innerHTML = data.map(item => `
-        <tr class="hover:bg-slate-50 border-b">
-          <td class="p-3">${item.WAKTU}</td>
-          <td class="p-3 font-semibold">${item.NAMA}</td>
-          <td class="p-3">${item.KELAS}</td>
-          <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.STATUS === 'HADIR' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${item.STATUS}</span></td>
-          <td class="p-3 text-slate-500 text-[10px]">${item.METODE}</td>
-        </tr>`).join('');
-    }
+    async function fetchDashboard() {
+      const res = await callBackend('getTodayAttendance');
+      if(res.success) {
+        document.getElementById('stat-total').innerText = res.stats.total;
+        document.getElementById('stat-hadir').innerText = res.stats.hadir;
+        document.getElementById('stat-terlambat').innerText = res.stats.terlambat;
+        document.getElementById('stat-izin').innerText = res.stats.izin + res.stats.sakit;
+        document.getElementById('stat-alpa').innerText = res.stats.alpa;
+        document.getElementById('stat-belum').innerText = res.stats.belumHadir;
 
-    function renderRecentScans(data) {
-      const container = document.getElementById('recent-scan-list');
-      const recent = [...data].reverse().slice(0, 5);
-      if (!recent.length) { container.innerHTML = '<p class="text-center text-slate-400 py-4">Kosong</p>'; return; }
-      container.innerHTML = recent.map(r => `
-        <div class="flex justify-between p-2 bg-slate-50 rounded-lg border">
-          <span class="font-bold">${r.NAMA}</span>
-          <span class="text-[10px] px-1.5 py-0.5 bg-indigo-100 rounded">${r.WAKTU}</span>
-        </div>`).join('');
-    }
-
-    // MANUAL INPUT
-    async function handleManualSubmit(e) {
-      e.preventDefault();
-      const studentId = document.getElementById('manual-student-id').value;
-      const status = document.getElementById('manual-status').value;
-      const keterangan = document.getElementById('manual-keterangan').value;
-      const res = await apiCall('recordManualAttendance', { studentId, status, keterangan });
-      alert(res.message);
-      if (res.success) { document.getElementById('form-manual-presensi').reset(); fetchDashboardData(); }
-    }
-
-    // REKAP
-    async function loadRekapData() {
-      const date = document.getElementById('filter-date').value;
-      const kelas = document.getElementById('filter-class').value;
-      const status = document.getElementById('filter-status').value;
-      const res = await apiCall('getAttendanceSummary', { filterDate: date, filterClass: kelas, filterStatus: status });
-      const tbody = document.getElementById('rekap-table-body');
-      if (res && res.success && res.data.length) {
-        tbody.innerHTML = res.data.map((r, i) => `<tr>
-          <td class="p-2 border">${i+1}</td>
-          <td class="p-2 border">${r.TANGGAL}</td>
-          <td class="p-2 border">${r.WAKTU}</td>
-          <td class="p-2 border">${r.ID_SISWA}</td>
-          <td class="p-2 border font-bold">${r.NAMA}</td>
-          <td class="p-2 border">${r.KELAS}</td>
-          <td class="p-2 border">${r.STATUS}</td>
-          <td class="p-2 border text-slate-500">${r.KETERANGAN || '-'}</td>
-        </tr>`).join('');
-      } else {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-slate-400">Data tidak ditemukan.</td></tr>';
+        const tbody = document.getElementById('dash-tbody');
+        if(res.data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="p-10 text-center text-slate-300">Belum ada aktivitas hari ini.</td></tr>';
+        } else {
+          tbody.innerHTML = res.data.map(r => `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="p-3 font-mono font-bold text-slate-500">${r.WAKTU}</td>
+              <td class="p-3 font-bold text-slate-800">${r.NAMA}</td>
+              <td class="p-3 text-slate-500">${r.KELAS}</td>
+              <td class="p-3 text-center"><span class="px-2 py-1 rounded-full text-[9px] font-black ${r.STATUS === 'HADIR' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${r.STATUS}</span></td>
+            </tr>
+          `).join('');
+        }
       }
     }
 
-    // STUDENT MGMT
+    async function fetchMaster() {
+      const res = await callBackend('getStudents');
+      if(res.success) {
+        masterStudents = res.data;
+        renderSiswaTable();
+        populateFilter();
+      }
+    }
+
     function renderSiswaTable() {
-      const tbody = document.getElementById('siswa-table-body');
-      tbody.innerHTML = studentsData.map(s => `
-        <tr class="hover:bg-slate-50 border-b">
+      const tbody = document.getElementById('siswa-tbody');
+      tbody.innerHTML = masterStudents.map(s => `
+        <tr class="hover:bg-slate-50">
           <td class="p-3 font-mono font-bold text-indigo-700">${s.ID_SISWA}</td>
-          <td class="p-3 font-mono">${s.NISN}</td>
-          <td class="p-3 font-semibold">${s.NAMA}</td>
-          <td class="p-3">${s.KELAS}</td>
-          <td class="p-3 text-[10px]">${s.NOMOR_WA_ORANG_TUA || '-'}</td>
-          <td class="p-3"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-bold">${s.STATUS}</span></td>
+          <td class="p-3 font-bold">${s.NAMA}</td>
+          <td class="p-3 font-medium">${s.KELAS}</td>
+          <td class="p-3 text-slate-500">${s.NOMOR_WA_ORANG_TUA || '-'}</td>
           <td class="p-3 text-center">
-            <button onclick="editStudent('${s.ID_SISWA}')" class="text-indigo-600 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button onclick="editSiswa('${s.ID_SISWA}')" class="text-indigo-600 mx-1"><i class="fa-solid fa-pen"></i></button>
           </td>
-        </tr>`).join('');
+        </tr>
+      `).join('');
     }
 
-    function openStudentModal() {
-      document.getElementById('form-student').reset();
-      document.getElementById('m-id-siswa').readOnly = false;
-      document.getElementById('modal-student-title').innerText = "Tambah Siswa";
-      document.getElementById('student-modal').classList.remove('hidden');
-      document.getElementById('student-modal').classList.add('flex');
+    function populateFilter() {
+      const cls = [...new Set(masterStudents.map(s => s.KELAS))].sort();
+      const f = document.getElementById('filter-class');
+      f.innerHTML = '<option value="">Semua Kelas</option>';
+      cls.forEach(c => f.innerHTML += `<option value="${c}">${c}</option>`);
     }
 
-    function closeStudentModal() {
-      document.getElementById('student-modal').classList.add('hidden');
-      document.getElementById('student-modal').classList.remove('flex');
+    async function fetchRekap() {
+      const d = document.getElementById('filter-date').value;
+      const c = document.getElementById('filter-class').value;
+      const res = await callBackend('getAttendanceSummary', {filterDate: d, filterClass: c});
+      if(res.success) {
+        const tbody = document.getElementById('rekap-tbody');
+        tbody.innerHTML = res.data.map(r => `
+          <tr>
+            <td class="p-2 border">${r.TANGGAL}</td>
+            <td class="p-2 border font-bold">${r.NAMA}</td>
+            <td class="p-2 border">${r.KELAS}</td>
+            <td class="p-2 border text-center font-bold">${r.STATUS}</td>
+            <td class="p-2 border text-slate-400">${r.PETUGAS || '-'}</td>
+          </tr>
+        `).join('');
+      }
     }
 
-    function editStudent(id) {
-      const s = studentsData.find(st => st.ID_SISWA === id);
-      if (!s) return;
-      document.getElementById('m-id-siswa').value = s.ID_SISWA;
-      document.getElementById('m-id-siswa').readOnly = true;
-      document.getElementById('m-nisn').value = s.NISN;
-      document.getElementById('m-nama').value = s.NAMA;
-      document.getElementById('m-kelas').value = s.KELAS;
-      document.getElementById('m-jk').value = s.JENIS_KELAMIN;
-      document.getElementById('m-wa').value = s.NOMOR_WA_ORANG_TUA;
-      document.getElementById('modal-student-title').innerText = "Edit Siswa";
-      document.getElementById('student-modal').classList.remove('hidden');
-      document.getElementById('student-modal').classList.add('flex');
+    function renderCards() {
+      const container = document.getElementById('print-area');
+      container.innerHTML = '';
+      masterStudents.forEach(s => {
+        const div = document.createElement('div');
+        div.className = "bg-white p-4 border-2 border-indigo-900 rounded-xl shadow-md text-center break-inside-avoid h-72 flex flex-col justify-between";
+        div.innerHTML = `
+          <div class="bg-indigo-900 text-white p-2 text-[10px] font-bold rounded-t-lg">SDN 005 LEMBAH REWAK - KARTU QR</div>
+          <div class="flex justify-center my-3" id="qr-${s.ID_SISWA}"></div>
+          <div><h4 class="font-black text-slate-800 uppercase">${s.NAMA}</h4><p class="text-[10px] text-indigo-600 font-mono">${s.ID_SISWA} | ${s.KELAS}</p></div>
+        `;
+        container.appendChild(div);
+        new QRCode(document.getElementById(`qr-${s.ID_SISWA}`), {text: s.ID_SISWA, width: 120, height: 120});
+      });
     }
 
-    async function handleStudentForm(e) {
+    function saveSettings() {
+      const url = document.getElementById('config-url').value;
+      if(!url) return;
+      localStorage.setItem('SDN005_API', url);
+      API_URL = url;
+      alert("Pengaturan Berhasil Disimpan!");
+      location.reload();
+    }
+
+    function openModal() { document.getElementById('student-modal').classList.replace('hidden', 'flex'); }
+    function closeModal() { document.getElementById('student-modal').classList.replace('flex', 'hidden'); document.getElementById('student-form').reset(); }
+    
+    async function saveStudent(e) {
       e.preventDefault();
-      const studentData = {
-        ID_SISWA: document.getElementById('m-id-siswa').value,
+      const payload = {
+        ID_SISWA: document.getElementById('m-id').value,
         NISN: document.getElementById('m-nisn').value,
         NAMA: document.getElementById('m-nama').value,
         KELAS: document.getElementById('m-kelas').value,
@@ -747,43 +439,8 @@
         NOMOR_WA_ORANG_TUA: document.getElementById('m-wa').value,
         STATUS: 'AKTIF'
       };
-      const res = await apiCall('saveStudent', { studentData });
-      alert(res.message);
-      if (res.success) { closeStudentModal(); initData(); }
-    }
-
-    // PRINTING QR
-    function renderQRCards() {
-      const filterClass = document.getElementById('cetak-filter-kelas').value;
-      const container = document.getElementById('print-area');
-      container.innerHTML = '';
-      const list = filterClass ? studentsData.filter(s => s.KELAS === filterClass) : studentsData;
-      list.forEach(s => {
-        const card = document.createElement('div');
-        card.className = "bg-white border-2 border-indigo-900 rounded-xl p-4 shadow-sm flex flex-col items-center justify-between text-center page-break h-[280px]";
-        card.innerHTML = `
-          <div class="w-full bg-indigo-900 text-white py-1 px-2 text-[10px] font-bold rounded-t-md uppercase flex justify-between items-center">
-            <span>SDN 005 LEMBAH REWAK</span>
-            <span>KARTU QR</span>
-          </div>
-          <div class="my-2" id="qr-render-${s.ID_SISWA}"></div>
-          <div class="w-full">
-            <h4 class="font-bold text-slate-800 text-xs truncate">${s.NAMA}</h4>
-            <p class="text-[10px] text-slate-500 font-mono">Kelas ${s.KELAS} | ${s.ID_SISWA}</p>
-          </div>`;
-        container.appendChild(card);
-        setTimeout(() => { new QRCode(document.getElementById(`qr-render-${s.ID_SISWA}`), { text: s.ID_SISWA, width: 100, height: 100 }); }, 50);
-      });
-    }
-
-    // SETTINGS
-    function saveSettings(e) {
-      e.preventDefault();
-      API_URL = document.getElementById('cfg-api-url').value;
-      localStorage.setItem('SD005_API_URL', API_URL);
-      alert('Pengaturan disimpan!');
-      initData();
-      switchTab('scan');
+      const res = await callBackend('saveStudent', {studentData: payload});
+      if(res.success) { closeModal(); fetchMaster(); } else { alert(res.message); }
     }
   </script>
 </body>
