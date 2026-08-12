@@ -426,7 +426,7 @@ nav.bottom-nav button.active{color:var(--ink);background:var(--bg);}
    Tempel URL Web App Google Apps Script hasil Deploy di sini.
    Contoh: https://script.google.com/macros/s/AKfycb..../exec
    ===================================================================== */
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzoYXmp-U1DUUOPOMiCbg65Q07QbT_nM5r1hsQqgZ3IR1XekSu8M_7q4bXwq80cvC-L/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyFRIDyUUniVnykE-LMp7RrX9yuX-Fsfn8JTMvozi0f_oMRSqSOQUjXqtW8aiNzknyz/exec";
 
 let adminSession = null; // {username, password} - disimpan di memori JS saja (tidak persisten)
 let studentsCache = [];
@@ -460,8 +460,7 @@ function goTo(page) {
   if (page === 'data') { loadDataPresensi(); startPolling(loadDataPresensi, 6000); }
   if (page === 'qr') { loadStudentSelect('qr-select-siswa'); }
   if (page === 'settings' && adminSession) { loadStudentSelect('ma-siswa'); loadStudentSelect('qr-select-siswa'); }
-  if (page === 'scan') { stopScanner(); }
-  else { stopScanner(); }
+  stopScanner();
 }
 function startPolling(fn, interval) { pollTimer = setInterval(fn, interval); }
 function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
