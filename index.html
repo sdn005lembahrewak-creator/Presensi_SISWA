@@ -198,15 +198,25 @@
                 </div>
 
                 <div class="p-5">
-                    <!-- Scanner Box -->
-                    <div id="reader" class="w-full bg-slate-900 rounded-xl overflow-hidden min-h-[280px] border-2 border-brand-500/50"></div>
+                    <!-- Scanner Box Container -->
+                    <div id="reader" class="w-full bg-slate-900 rounded-xl overflow-hidden min-h-[280px] border-2 border-brand-500/50 flex flex-col items-center justify-center text-white text-xs p-4 relative">
+                        <span class="text-slate-400"><i class="fa-solid fa-camera text-2xl mb-2 block text-center"></i> Klik "Aktifkan Kamera" di bawah untuk memindai</span>
+                    </div>
+
+                    <!-- Camera Error Notice -->
+                    <div id="cameraErrorMsg" class="hidden mt-3 p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs space-y-1">
+                        <div class="font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-rose-600"></i> Kamera Tidak Dapat Diakses
+                        </div>
+                        <p id="cameraErrorText">Pastikan Anda telah memberikan izin akses kamera pada browser dan menggunakan koneksi HTTPS.</p>
+                    </div>
 
                     <!-- Scanner Controls -->
                     <div class="mt-4 flex flex-wrap gap-2 justify-center">
-                        <button id="btnStartScan" onclick="startScanner()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2">
+                        <button id="btnStartScan" onclick="startScanner()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2 shadow">
                             <i class="fa-solid fa-play"></i> Aktifkan Kamera
                         </button>
-                        <button id="btnStopScan" onclick="stopScanner()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2 hidden">
+                        <button id="btnStopScan" onclick="stopScanner()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2 hidden shadow">
                             <i class="fa-solid fa-stop"></i> Matikan Kamera
                         </button>
                     </div>
@@ -607,7 +617,6 @@
     </div>
 
     <script>
-        // Default Mock / Fallback Storage
         const CONFIG = {
             scriptUrl: localStorage.getItem('sd005_script_url') || '',
             cutoffTime: localStorage.getItem('sd005_cutoff') || '07:30',
@@ -615,7 +624,8 @@
             isAdmin: localStorage.getItem('sd005_is_admin') === 'true'
         };
 
-        let html5QrcodeScanner = null;
+        let html5QrCode = null;
+        let isScanning = false;
 
         // Demo Initial Students Data (Used when offline or API not set)
         let localStudents = JSON.parse(localStorage.getItem('sd005_students')) || [
@@ -744,36 +754,81 @@
             alert('Pengaturan berhasil disimpan!');
         }
 
-        function startScanner() {
+        async function startScanner() {
             const resultBox = document.getElementById('scanResultBox');
-            resultBox.classList.add('hidden');
+            const cameraErrorMsg = document.getElementById('cameraErrorMsg');
+            if (resultBox) resultBox.classList.add('hidden');
+            if (cameraErrorMsg) cameraErrorMsg.classList.add('hidden');
 
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear();
+            // Validasi Protokol HTTPS (Kamera membutuhkan HTTPS/Localhost di browser modern)
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                showCameraError("Akses kamera membutuhkan koneksi aman (HTTPS). Jika diakses di HP/Hosting, pastikan menggunakan GitHub Pages atau protokol https://.");
             }
 
-            html5QrcodeScanner = new Html5QrcodeScanner(
-                "reader",
-                { 
-                    fps: 10, 
-                    qrbox: { width: 220, height: 220 },
-                    aspectRatio: 1.0,
-                    facingMode: "environment"
-                },
-                /* verbose= */ false
-            );
+            if (isScanning) return;
 
-            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-            document.getElementById('btnStartScan').classList.add('hidden');
-            document.getElementById('btnStopScan').classList.remove('hidden');
+            try {
+                if (!html5QrCode) {
+                    html5QrCode = new Html5Qrcode("reader");
+                }
+
+                const config = { 
+                    fps: 15, 
+                    qrbox: { width: 220, height: 220 },
+                    aspectRatio: 1.0
+                };
+
+                // Percobaan 1: Kamera Belakang (environment)
+                try {
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        config,
+                        onScanSuccess,
+                        onScanFailure
+                    );
+                } catch (envErr) {
+                    console.warn("Kamera belakang tidak dapat diakses, mencoba kamera depan/default:", envErr);
+                    // Percobaan 2: Fallback ke kamera depan (user) atau kamera default apa pun
+                    await html5QrCode.start(
+                        { facingMode: "user" },
+                        config,
+                        onScanSuccess,
+                        onScanFailure
+                    );
+                }
+
+                isScanning = true;
+                document.getElementById('btnStartScan').classList.add('hidden');
+                document.getElementById('btnStopScan').classList.remove('hidden');
+
+            } catch (err) {
+                console.error("Gagal mengaktifkan kamera:", err);
+                showCameraError(err.message || "Izin kamera ditolak atau kamera tidak ditemukan. Silakan periksa izin browser Anda.");
+                document.getElementById('btnStartScan').classList.remove('hidden');
+                document.getElementById('btnStopScan').classList.add('hidden');
+            }
         }
 
-        function stopScanner() {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear().catch(error => console.error(error));
+        async function stopScanner() {
+            if (html5QrCode && isScanning) {
+                try {
+                    await html5QrCode.stop();
+                    isScanning = false;
+                } catch (err) {
+                    console.error("Gagal menghentikan kamera:", err);
+                }
             }
             document.getElementById('btnStartScan').classList.remove('hidden');
             document.getElementById('btnStopScan').classList.add('hidden');
+        }
+
+        function showCameraError(msg) {
+            const errBox = document.getElementById('cameraErrorMsg');
+            const errText = document.getElementById('cameraErrorText');
+            if (errBox && errText) {
+                errText.innerText = msg;
+                errBox.classList.remove('hidden');
+            }
         }
 
         function onScanSuccess(decodedText, decodedResult) {
@@ -782,7 +837,7 @@
         }
 
         function onScanFailure(error) {
-            // handle scan failure, usually ignore
+            // Callback saat tidak ada QR dalam frame (diabaikan agar log bersih)
         }
 
         function processAttendanceScan(qrId) {
