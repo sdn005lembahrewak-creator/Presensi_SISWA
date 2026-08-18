@@ -98,13 +98,21 @@ tbody tr:hover{background:var(--surface-2);}
 .login-badge-mark{width:64px; height:64px; border-radius:20px; background:rgba(255,255,255,.12); display:flex; align-items:center; justify-content:center; margin-bottom:28px; position:relative; z-index:1;}
 .login-visual h1{font-family:var(--font-display); font-size:34px; font-weight:600; line-height:1.25; max-width:420px; position:relative; z-index:1;}
 .login-visual p{margin-top:14px; font-size:15px; color:rgba(255,255,255,.75); max-width:380px; position:relative; z-index:1;}
-.login-form-side{flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg); padding:32px;}
+.login-form-side{flex:1; display:flex; align-items:center; justify-content:center; background:var(--bg); padding:32px; position:relative;}
+.login-back-btn{position:absolute; top:24px; left:24px;}
 .login-card{width:100%; max-width:380px; background:var(--surface); border-radius:24px; padding:38px 34px; box-shadow:var(--shadow-lift);}
 .login-card h2{font-family:var(--font-display); font-size:22px; color:var(--navy-900); margin-bottom:4px;}
 .login-card .section-sub{margin-bottom:26px;}
 .login-error{background:var(--red-100); color:var(--red-600); font-size:13.5px; font-weight:600; padding:10px 14px; border-radius:var(--radius-sm); margin-bottom:16px;}
 .login-card .btn{width:100%; margin-top:6px; padding:13px;}
 @media (max-width:860px){ .login-visual{display:none;} }
+
+/* ---------- Layar Scan Publik ---------- */
+.scan-page-header{height:70px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; padding:0 24px;}
+.scan-page-brand{display:flex; align-items:center; gap:11px;}
+.scan-page-title{font-family:var(--font-display); font-size:15px; font-weight:600; color:var(--navy-900);}
+.scan-page-sub{font-size:11.5px; color:var(--text-muted); font-weight:600;}
+.scan-page-body{max-width:900px; margin:0 auto; padding:26px 20px 40px;}
 
 /* ---------- Layout Aplikasi ---------- */
 #appShell{display:flex; min-height:100vh;}
@@ -246,8 +254,28 @@ tbody tr:hover{background:var(--surface-2);}
 </head>
 <body>
 
-<!-- ===================== LOGIN ===================== -->
-<div id="loginScreen">
+<!-- ===================== SCAN PRESENSI (PUBLIK — TANPA LOGIN) ===================== -->
+<div id="scanScreen">
+  <div class="scan-page-header">
+    <div class="scan-page-brand">
+      <div class="sidebar-brand-mark" style="background:var(--green-600)">SD</div>
+      <div>
+        <div class="scan-page-title">SD Negeri 005 Lembah Rewak</div>
+        <div class="scan-page-sub">Presensi Peserta Didik</div>
+      </div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-clock">
+      <span class="time" id="scanTopClock">--:--:--</span>
+      <span class="date" id="scanTopDate">-</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="scanAuthBtn">Masuk sebagai Petugas</button>
+  </div>
+  <div id="scanScreenBody" class="scan-page-body"></div>
+</div>
+
+<!-- ===================== LOGIN (Petugas / Admin) ===================== -->
+<div id="loginScreen" hidden>
   <div class="login-visual">
     <div class="login-badge-mark">
       <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M7 8h10M7 12h6"></path><circle cx="16.5" cy="15.5" r="2.2"></circle></svg>
@@ -256,6 +284,9 @@ tbody tr:hover{background:var(--surface-2);}
     <p>Satu tap kartu QR, kehadiran tercatat otomatis, wali murid tenang, guru hemat waktu.</p>
   </div>
   <div class="login-form-side">
+    <button class="btn-icon login-back-btn" onclick="goToScan()" title="Kembali ke layar scan">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+    </button>
     <div class="login-card">
       <h2>Selamat datang</h2>
       <div class="section-sub">SD Negeri 005 Lembah Rewak</div>
@@ -285,6 +316,10 @@ tbody tr:hover{background:var(--surface-2);}
     </div>
     <nav class="sidebar-nav" id="sidebarNav"></nav>
     <div class="sidebar-foot">
+      <div class="sidebar-logout" onclick="goToScan()" style="margin-bottom:4px;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><path d="M14 14h3v3h-3zM19 14h2M14 19h2M17 17h4v4h-4z"></path></svg>
+        Layar Scan
+      </div>
       <div class="sidebar-logout" onclick="logout()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
         Keluar
@@ -334,7 +369,7 @@ tbody tr:hover{background:var(--surface-2);}
  * Tempelkan URL Web App Apps Script Anda (didapat setelah Deploy > New
  * deployment > Web app, lihat Tahap 6 pada panduan instalasi).
  * ===================================================================== */
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxt4-pgnoKUbrZVoq1pLiM90smgNobrM3XMJixjNuQTHpV2rZxB44jKkPeMoj0zHLCxBw/exec';
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwxp2VVnZyz4ZvBtpDPKojleo9KdQSuAvXxeazBd1Qm8b8zKxdjxr-0_jjm7lOCMRW32Q/exec';
 
 /* ---------------------------------------------------------------------
  * STATE
@@ -346,8 +381,8 @@ let scannerLock = false;
 let kelasCache = [];
 
 const MENUS = {
-  ADMIN:    ['dashboard','scan','siswa','rekap','laporan','kartu','pengaturan'],
-  OPERATOR: ['dashboard','scan','laporan'],
+  ADMIN:    ['dashboard','siswa','rekap','laporan','kartu','pengaturan'],
+  OPERATOR: ['dashboard','laporan'],
   GURU:     ['dashboard','rekap','laporan']
 };
 const MENU_LABEL = {
@@ -407,6 +442,10 @@ function tickClock(){
   const dateEl = document.getElementById('topbarDate');
   if(clockEl) clockEl.textContent = time + ' WIB';
   if(dateEl) dateEl.textContent = date;
+  const scEl = document.getElementById('scanTopClock');
+  const sdEl = document.getElementById('scanTopDate');
+  if(scEl) scEl.textContent = time + ' WIB';
+  if(sdEl) sdEl.textContent = date;
   const rc = document.getElementById('resultClockTime'); if(rc) rc.textContent = time;
   const rd = document.getElementById('resultClockDate'); if(rd) rd.textContent = date;
 }
@@ -435,12 +474,12 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 });
 
 function enterApp(){
-  document.getElementById('loginScreen').hidden = true;
-  document.getElementById('appShell').hidden = false;
+  if(scannerInstance){ try{ scannerInstance.stop(); }catch(e){} scannerInstance=null; }
   document.getElementById('userAvatar').textContent = initials(currentUser.nama);
   document.getElementById('userNameLabel').textContent = currentUser.nama;
   document.getElementById('userRoleLabel').textContent = labelRole(currentUser.role);
   buildSidebar();
+  showScreen('app');
   navigateTo('dashboard');
 }
 function initials(nama){ return (nama||'?').split(' ').map(function(w){return w[0];}).slice(0,2).join('').toUpperCase(); }
@@ -448,10 +487,41 @@ function labelRole(r){ return r==='ADMIN'?'Administrator':r==='OPERATOR'?'Operat
 
 function logout(){
   currentUser = null;
-  if(scannerInstance){ try{ scannerInstance.stop(); }catch(e){} scannerInstance=null; }
-  document.getElementById('appShell').hidden = true;
-  document.getElementById('loginScreen').hidden = false;
   document.getElementById('loginForm').reset();
+  goToScan();
+}
+
+/* ---------------------------------------------------------------------
+ * NAVIGASI ANTAR LAYAR: scan (publik) / login / app (admin & petugas)
+ * ------------------------------------------------------------------- */
+function showScreen(name){
+  document.getElementById('scanScreen').hidden = name!=='scan';
+  document.getElementById('loginScreen').hidden = name!=='login';
+  document.getElementById('appShell').hidden = name!=='app';
+}
+function goToLogin(){
+  if(scannerInstance){ try{ scannerInstance.stop(); }catch(e){} scannerInstance=null; }
+  showScreen('login');
+  document.getElementById('loginUsername').focus();
+}
+function goToScan(){
+  showScreen('scan');
+  renderScanScreen();
+}
+function updateScanAuthButton(){
+  const btn = document.getElementById('scanAuthBtn');
+  if(!btn) return;
+  if(currentUser){
+    btn.textContent = 'Kembali ke Dashboard';
+    btn.onclick = function(){
+      if(scannerInstance){ try{ scannerInstance.stop(); }catch(e){} scannerInstance=null; }
+      showScreen('app');
+      navigateTo(currentView || 'dashboard');
+    };
+  }else{
+    btn.textContent = 'Masuk sebagai Petugas';
+    btn.onclick = goToLogin;
+  }
 }
 
 function toggleUserMenu(){ const m = document.getElementById('userMenu'); m.hidden = !m.hidden; }
@@ -487,7 +557,7 @@ async function navigateTo(view){
   if(scannerInstance && view!=='scan'){ try{ await scannerInstance.stop(); }catch(e){} scannerInstance=null; }
   if(kelasCache.length===0){ const r = await api('daftarKelas'); if(r.ok) kelasCache = r.data; }
 
-  const map = { dashboard:renderDashboard, scan:renderScan, siswa:renderSiswa, rekap:renderRekap, laporan:renderLaporan, kartu:renderKartu, pengaturan:renderPengaturan };
+  const map = { dashboard:renderDashboard, siswa:renderSiswa, rekap:renderRekap, laporan:renderLaporan, kartu:renderKartu, pengaturan:renderPengaturan };
   if(map[view]) map[view]();
 }
 
@@ -565,11 +635,15 @@ function formatTanggalIndo(ymd){
 }
 
 /* =====================================================================
- * VIEW: SCAN PRESENSI
+ * LAYAR SCAN PRESENSI — PUBLIK, TANPA LOGIN
+ * Ini adalah layar default saat aplikasi dibuka, supaya siapa pun yang
+ * bertugas di gerbang sekolah bisa langsung memindai tanpa perlu masuk
+ * akun. Menu Data Siswa, Rekap, Laporan, Kartu QR, dan Pengaturan tetap
+ * terkunci di balik login (lihat MENUS di atas).
  * ===================================================================== */
-function renderScan(){
-  const content = document.getElementById('content');
-  content.innerHTML =
+function renderScanScreen(){
+  const body = document.getElementById('scanScreenBody');
+  body.innerHTML =
     '<div class="scan-grid">' +
       '<div class="card scan-panel">' +
         '<div class="section-title">Pindai QR Siswa</div>' +
@@ -586,13 +660,14 @@ function renderScan(){
     '</div>';
 
   document.getElementById('manualQrInput').addEventListener('keydown', function(e){ if(e.key==='Enter') submitManualScan(); });
+  updateScanAuthButton();
   refreshScanCount();
   startScanner();
 }
 
 async function refreshScanCount(){
-  const r = await api('dashboardStats');
-  if(r.ok){ const el = document.getElementById('scanCountToday'); if(el) el.textContent = r.hadir + r.terlambat; }
+  const r = await api('jumlahHadirPublik');
+  if(r.ok){ const el = document.getElementById('scanCountToday'); if(el) el.textContent = r.hadir; }
 }
 
 function startScanner(){
@@ -1016,6 +1091,12 @@ function closeModal(){ document.getElementById('modalRoot').innerHTML = ''; }
 document.addEventListener('keydown', function(e){
   if(e.key==='Escape') closeModal();
 });
+
+/* ---------------------------------------------------------------------
+ * INISIALISASI — aplikasi terbuka langsung di layar Scan Presensi (publik)
+ * ------------------------------------------------------------------- */
+tickClock();
+renderScanScreen();
 </script>
 </body>
 </html>
