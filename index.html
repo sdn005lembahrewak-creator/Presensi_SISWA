@@ -187,6 +187,11 @@ tbody tr:hover{background:var(--surface-2);}
 .manual-scan{display:flex; gap:8px; margin-top:16px;}
 .manual-scan input{flex:1;}
 
+.scan-mode-row{display:flex; gap:6px; background:var(--slate-100); padding:5px; border-radius:var(--radius-pill); width:fit-content; margin:0 auto 16px;}
+.scan-mode-btn{display:flex; align-items:center; gap:7px; border:none; background:none; padding:9px 18px; border-radius:var(--radius-pill); font-size:13.5px; font-weight:700; color:var(--text-muted); font-family:inherit;}
+.scan-mode-btn.active{background:var(--navy-800); color:#fff;}
+.libur-banner{display:flex; align-items:center; gap:8px; justify-content:center; background:var(--amber-100); color:var(--amber-600); font-size:13.5px; font-weight:700; padding:10px 16px; border-radius:var(--radius-md); margin-bottom:16px;}
+
 .result-panel{padding:22px; display:flex; flex-direction:column;}
 .result-clock{text-align:center; padding:8px 0 18px; border-bottom:1px dashed var(--border); margin-bottom:18px;}
 .result-clock .time{font-family:var(--font-mono); font-size:34px; font-weight:700; color:var(--navy-900); letter-spacing:.02em;}
@@ -198,6 +203,7 @@ tbody tr:hover{background:var(--surface-2);}
 .result-box.success{background:var(--green-100); color:var(--green-700);}
 .result-box.warning{background:var(--amber-100); color:var(--amber-600);}
 .result-box.danger{background:var(--red-100); color:var(--red-600);}
+.result-box.info{background:var(--slate-100); color:var(--navy-700);}
 .result-box .icon-wrap{width:56px; height:56px; border-radius:50%; background:rgba(255,255,255,.6); display:flex; align-items:center; justify-content:center; margin-bottom:14px;}
 .result-box .r-title{font-family:var(--font-display); font-size:19px; font-weight:600;}
 .result-box .r-name{font-size:22px; font-weight:800; color:var(--navy-900); margin-top:10px;}
@@ -369,7 +375,7 @@ tbody tr:hover{background:var(--surface-2);}
  * Tempelkan URL Web App Apps Script Anda (didapat setelah Deploy > New
  * deployment > Web app, lihat Tahap 6 pada panduan instalasi).
  * ===================================================================== */
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyxdEp4BG6Op1lGRM2LUngBjL8DJVpSPXQNajmHPpX5q4ydoa4vJA-T6Y9NRjDki09V0Q/exec';
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzEpMJKHGJRlCCaZOfGPkCyjNUTzJ2ETUOumk-zVaJvsItuJKvUCLUm60r8e2vJk2ayng/exec';
 
 /* ---------------------------------------------------------------------
  * STATE
@@ -578,6 +584,7 @@ async function renderDashboard(){
         '<div><div class="section-title">Presensi Hari Ini</div><div class="section-sub" id="dashDateLabel"></div></div>' +
         '<div class="toolbar">' +
           '<div class="search-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg><input id="dashSearch" placeholder="Cari nama/NISN..."></div>' +
+          '<select class="select-filter" id="dashTipeFilter"><option value="MASUK">Presensi Masuk</option><option value="PULANG">Presensi Pulang</option></select>' +
           '<select class="select-filter" id="dashKelasFilter">'+kelasOptions()+'</select>' +
           '<select class="select-filter" id="dashStatusFilter"><option value="">Semua Status</option><option>HADIR</option><option>TERLAMBAT</option><option>IZIN</option><option>SAKIT</option><option>ALPA</option></select>' +
         '</div>' +
@@ -586,7 +593,7 @@ async function renderDashboard(){
     '</div>';
 
   document.getElementById('dashDateLabel').textContent = formatTanggalIndo(todayStr());
-  ['dashSearch','dashKelasFilter','dashStatusFilter'].forEach(function(id){
+  ['dashSearch','dashTipeFilter','dashKelasFilter','dashStatusFilter'].forEach(function(id){
     document.getElementById(id).addEventListener('input', loadDashboardTable);
     document.getElementById(id).addEventListener('change', loadDashboardTable);
   });
@@ -605,22 +612,27 @@ async function loadDashboardStats(){
     {label:'Izin', num:r.izin, color:'var(--slate-500)', bg:'var(--slate-100)', ic:'dashboard'},
     {label:'Sakit', num:r.sakit, color:'#6B4FA0', bg:'#EDE6F7', ic:'dashboard'},
     {label:'Alpa', num:r.alpa, color:'var(--red-600)', bg:'var(--red-100)', ic:'dashboard'},
-    {label:'Belum Presensi', num:r.belumPresensi, color:'var(--navy-700)', bg:'var(--slate-100)', ic:'dashboard'}
+    {label:'Belum Presensi', num:r.belumPresensi, color:'var(--navy-700)', bg:'var(--slate-100)', ic:'dashboard'},
+    {label:'Sudah Pulang', num:r.sudahPulang, color:'var(--navy-600)', bg:'var(--slate-100)', ic:'rekap'}
   ];
   document.getElementById('statGrid').innerHTML = cards.map(function(c){
     return '<div class="stat-card" style="--stat-color:'+c.color+'; --stat-bg:'+c.bg+'"><div class="stat-icon">'+icon(c.ic,16)+'</div><div class="stat-num">'+c.num+'</div><div class="stat-label">'+c.label+'</div></div>';
   }).join('');
+  const dateLabel = document.getElementById('dashDateLabel');
+  if(dateLabel) dateLabel.textContent = formatTanggalIndo(todayStr()) + (r.libur ? ' — Hari Libur' : '');
 }
 
 async function loadDashboardTable(){
   const q = document.getElementById('dashSearch').value.trim();
+  const tipe = document.getElementById('dashTipeFilter').value;
   const kelas = document.getElementById('dashKelasFilter').value;
   const status = document.getElementById('dashStatusFilter').value;
-  const r = await api('presensiHariIni', { tanggal: todayStr(), q, kelas, status, kelasGuru: kelas });
+  const r = await api('presensiHariIni', { tanggal: todayStr(), tipe, q, kelas, status, kelasGuru: kelas });
   const tbody = document.getElementById('dashTableBody');
   if(!r.ok || r.data.length===0){ tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Belum ada data presensi yang cocok.</div></td></tr>'; return; }
   tbody.innerHTML = r.data.map(function(p, i){
-    return '<tr><td>'+(i+1)+'</td><td><strong>'+p.Nama+'</strong></td><td>'+p.Kelas+'</td><td style="font-family:var(--font-mono)">'+p.Jam+'</td><td>'+statusBadge(p.Status)+'</td></tr>';
+    const statusTampil = p.Status==='PULANG' ? '<span class="badge badge-izin"><span class="badge-dot"></span>PULANG</span>' : statusBadge(p.Status);
+    return '<tr><td>'+(i+1)+'</td><td><strong>'+p.Nama+'</strong></td><td>'+p.Kelas+'</td><td style="font-family:var(--font-mono)">'+p.Jam+'</td><td>'+statusTampil+'</td></tr>';
   }).join('');
 }
 
@@ -641,12 +653,19 @@ function formatTanggalIndo(ymd){
  * akun. Menu Data Siswa, Rekap, Laporan, Kartu QR, dan Pengaturan tetap
  * terkunci di balik login (lihat MENUS di atas).
  * ===================================================================== */
+let scanMode = 'MASUK'; // 'MASUK' | 'PULANG'
+
 function renderScanScreen(){
   const body = document.getElementById('scanScreenBody');
   body.innerHTML =
+    '<div class="scan-mode-row">' +
+      '<button class="scan-mode-btn active" id="modeBtnMasuk" onclick="setScanMode(\'MASUK\')">'+icon('scan',15)+' Presensi Masuk</button>' +
+      '<button class="scan-mode-btn" id="modeBtnPulang" onclick="setScanMode(\'PULANG\')">'+icon('rekap',15)+' Presensi Pulang</button>' +
+    '</div>' +
+    '<div class="libur-banner" id="liburBanner" hidden>'+icon('laporan',16)+' <span id="liburBannerText"></span></div>' +
     '<div class="scan-grid">' +
       '<div class="card scan-panel">' +
-        '<div class="section-title">Pindai QR Siswa</div>' +
+        '<div class="section-title" id="scanPanelTitle">Pindai QR Siswa — Masuk</div>' +
         '<div class="section-sub">Arahkan kamera ke QR Code pada kartu siswa.</div>' +
         '<div class="scan-frame" style="margin-top:16px;"><div id="qrReader"></div><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div></div>' +
         '<div class="scan-status-row"><span class="scan-status-dot" id="camDot"></span><span id="camStatusText">Menyiapkan kamera...</span></div>' +
@@ -654,7 +673,7 @@ function renderScanScreen(){
       '</div>' +
       '<div class="card result-panel">' +
         '<div class="result-clock"><div class="time" id="resultClockTime">--:--:--</div><div class="date" id="resultClockDate">-</div></div>' +
-        '<div class="result-count">Sudah hadir hari ini: <b id="scanCountToday">0</b></div>' +
+        '<div class="result-count" id="scanCountLabel">Sudah masuk hari ini: <b id="scanCountToday">0</b></div>' +
         '<div class="result-box idle" id="resultBox"><div class="icon-wrap">'+icon('scan',26)+'</div><div class="r-title">Menunggu Pemindaian</div><div class="r-meta">Hasil presensi akan muncul di sini</div></div>' +
       '</div>' +
     '</div>';
@@ -665,9 +684,34 @@ function renderScanScreen(){
   startScanner();
 }
 
+function setScanMode(mode){
+  scanMode = mode;
+  document.getElementById('modeBtnMasuk').classList.toggle('active', mode==='MASUK');
+  document.getElementById('modeBtnPulang').classList.toggle('active', mode==='PULANG');
+  document.getElementById('scanPanelTitle').textContent = 'Pindai QR Siswa — ' + (mode==='MASUK' ? 'Masuk' : 'Pulang');
+  resetResultBox();
+  refreshScanCount();
+}
+function resetResultBox(){
+  const box = document.getElementById('resultBox');
+  if(!box) return;
+  box.className = 'result-box idle';
+  box.innerHTML = '<div class="icon-wrap">'+icon('scan',26)+'</div><div class="r-title">Menunggu Pemindaian</div><div class="r-meta">Hasil presensi akan muncul di sini</div>';
+}
+
 async function refreshScanCount(){
-  const r = await api('jumlahHadirPublik');
-  if(r.ok){ const el = document.getElementById('scanCountToday'); if(el) el.textContent = r.hadir; }
+  const r = await api('jumlahHadirPublik', { tipe: scanMode });
+  if(!r.ok) return;
+  const el = document.getElementById('scanCountToday');
+  const label = document.getElementById('scanCountLabel');
+  if(el) el.textContent = r.jumlah;
+  if(label) label.firstChild.textContent = (scanMode==='MASUK' ? 'Sudah masuk hari ini: ' : 'Sudah pulang hari ini: ');
+  const banner = document.getElementById('liburBanner');
+  const bannerText = document.getElementById('liburBannerText');
+  if(banner && bannerText){
+    if(r.libur){ bannerText.textContent = 'Hari ini ('+r.hari+') libur — presensi tidak tersedia.'; banner.hidden = false; }
+    else{ banner.hidden = true; }
+  }
 }
 
 function startScanner(){
@@ -698,29 +742,45 @@ function submitManualScan(){
 }
 
 async function processScan(qrId){
-  const r = await api('scanPresensi', { qrId: qrId });
+  const r = await api('scanPresensi', { qrId: qrId, tipe: scanMode });
   const box = document.getElementById('resultBox');
   if(!box) return;
+  const labelTipe = scanMode==='MASUK' ? 'Masuk' : 'Pulang';
+
   if(!r.ok){
     box.className = 'result-box danger';
     box.innerHTML = '<div class="icon-wrap">'+dangerIcon()+'</div><div class="r-title">Presensi Gagal</div><div class="r-meta">'+(r.message||'QR tidak dikenali')+'</div>';
     playBeep(false);
     return;
   }
-  if(r.status==='SUDAH_PRESENSI'){
-    box.className = 'result-box warning';
-    box.innerHTML = '<div class="icon-wrap">'+warnIcon()+'</div><div class="r-title">Sudah Presensi</div><div class="r-name">'+r.siswa.nama+'</div><div class="r-meta">Kelas '+r.siswa.kelas+'</div><div class="r-time">Presensi pertama: '+r.jamPertama+' WIB</div>';
+  if(r.status==='LIBUR'){
+    box.className = 'result-box info';
+    box.innerHTML = '<div class="icon-wrap">'+infoIcon()+'</div><div class="r-title">Hari Libur</div>'+(r.siswa?'<div class="r-name">'+r.siswa.nama+'</div>':'')+'<div class="r-meta">'+r.message+'</div>';
     playBeep(false);
     return;
   }
+  if(r.status==='BELUM_WAKTUNYA'){
+    box.className = 'result-box info';
+    box.innerHTML = '<div class="icon-wrap">'+infoIcon()+'</div><div class="r-title">Belum Waktunya Presensi</div><div class="r-name">'+r.siswa.nama+'</div><div class="r-meta">'+r.message+'</div>';
+    playBeep(false);
+    return;
+  }
+  if(r.status==='SUDAH_PRESENSI'){
+    box.className = 'result-box warning';
+    box.innerHTML = '<div class="icon-wrap">'+warnIcon()+'</div><div class="r-title">Sudah Presensi '+labelTipe+'</div><div class="r-name">'+r.siswa.nama+'</div><div class="r-meta">Kelas '+r.siswa.kelas+'</div><div class="r-time">Presensi pertama: '+r.jamPertama+' WIB</div>';
+    playBeep(false);
+    return;
+  }
+  const statusTampil = r.status==='PULANG' ? '<span class="badge badge-izin"><span class="badge-dot"></span>PULANG</span>' : statusBadge(r.status);
   box.className = 'result-box success';
-  box.innerHTML = '<div class="icon-wrap">'+okIcon()+'</div><div class="r-title">Presensi Berhasil</div><div class="r-name">'+r.siswa.nama+'</div><div class="r-meta">Kelas '+r.siswa.kelas+' &middot; '+statusBadge(r.status)+'</div><div class="r-time">'+r.jam+' WIB</div>';
+  box.innerHTML = '<div class="icon-wrap">'+okIcon()+'</div><div class="r-title">Presensi '+labelTipe+' Berhasil</div><div class="r-name">'+r.siswa.nama+'</div><div class="r-meta">Kelas '+r.siswa.kelas+' &middot; '+statusTampil+'</div><div class="r-time">'+r.jam+' WIB</div>';
   playBeep(true);
   refreshScanCount();
 }
 function okIcon(){ return '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>'; }
 function warnIcon(){ return '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"></path><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>'; }
 function dangerIcon(){ return '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>'; }
+function infoIcon(){ return '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12.5"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'; }
 function playBeep(success){
   try{
     const ctx = new (window.AudioContext||window.webkitAudioContext)();
@@ -837,7 +897,7 @@ async function renderRekap(){
           '<input type="date" class="select-filter" id="rekapSampai" value="'+today+'">' +
         '</div>' +
       '</div>' +
-      '<div class="table-wrap"><table><thead><tr><th>No</th><th>Nama</th><th>Kelas</th><th>Hadir</th><th>Terlambat</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>% Kehadiran</th></tr></thead><tbody id="rekapTableBody"></tbody></table></div>' +
+      '<div class="table-wrap"><table><thead><tr><th>No</th><th>Nama</th><th>Kelas</th><th>Hadir</th><th>Terlambat</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>Pulang</th><th>% Kehadiran</th></tr></thead><tbody id="rekapTableBody"></tbody></table></div>' +
     '</div>';
   ['rekapSearch','rekapKelasFilter','rekapDari','rekapSampai'].forEach(function(id){
     document.getElementById(id).addEventListener('input', loadRekapTable);
@@ -852,9 +912,9 @@ async function loadRekapTable(){
   const sampaiTanggal = document.getElementById('rekapSampai').value;
   const r = await api('rekapSiswa', { q, kelas, dariTanggal, sampaiTanggal });
   const tbody = document.getElementById('rekapTableBody');
-  if(!r.ok || r.data.length===0){ tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">Tidak ada data rekap.</div></td></tr>'; return; }
+  if(!r.ok || r.data.length===0){ tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state">Tidak ada data rekap.</div></td></tr>'; return; }
   tbody.innerHTML = r.data.map(function(s,i){
-    return '<tr><td>'+(i+1)+'</td><td><strong>'+s.nama+'</strong></td><td>'+s.kelas+'</td><td>'+s.hadir+'</td><td>'+s.terlambat+'</td><td>'+s.izin+'</td><td>'+s.sakit+'</td><td>'+s.alpa+'</td>' +
+    return '<tr><td>'+(i+1)+'</td><td><strong>'+s.nama+'</strong></td><td>'+s.kelas+'</td><td>'+s.hadir+'</td><td>'+s.terlambat+'</td><td>'+s.izin+'</td><td>'+s.sakit+'</td><td>'+s.alpa+'</td><td>'+s.pulang+'</td>' +
       '<td><div class="progress-wrap"><div class="progress-track"><div class="progress-fill" style="width:'+s.persentase+'%"></div></div><span class="progress-num">'+s.persentase+'%</span></div></td></tr>';
   }).join('');
 }
@@ -877,6 +937,7 @@ async function renderLaporan(){
       '</div>' +
       '<div class="toolbar no-print" style="margin-bottom:16px;">' +
         '<div class="search-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg><input id="lapSearch" placeholder="Cari nama/NISN..."></div>' +
+        '<select class="select-filter" id="lapTipeFilter"><option value="">Masuk &amp; Pulang</option><option value="MASUK">Presensi Masuk</option><option value="PULANG">Presensi Pulang</option></select>' +
         '<select class="select-filter" id="lapKelasFilter">'+kelasOptions()+'</select>' +
         '<select class="select-filter" id="lapStatusFilter"><option value="">Semua Status</option><option>HADIR</option><option>TERLAMBAT</option><option>IZIN</option><option>SAKIT</option><option>ALPA</option></select>' +
         '<input type="date" class="select-filter" id="lapDari" value="'+today+'">' +
@@ -886,10 +947,10 @@ async function renderLaporan(){
       '</div>' +
       '<div id="printArea">' +
         '<div style="text-align:center; margin-bottom:14px; display:none;" id="printHeader"><strong id="printSchool"></strong><div style="font-size:12px;">Laporan Presensi Peserta Didik</div></div>' +
-        '<div class="table-wrap"><table><thead><tr><th>No</th><th>Tanggal</th><th>Nama</th><th>Kelas</th><th>Jam</th><th>Status</th></tr></thead><tbody id="lapTableBody"></tbody></table></div>' +
+        '<div class="table-wrap"><table><thead><tr><th>No</th><th>Tanggal</th><th>Nama</th><th>Kelas</th><th>Jenis</th><th>Jam</th><th>Status</th></tr></thead><tbody id="lapTableBody"></tbody></table></div>' +
       '</div>' +
     '</div>';
-  ['lapSearch','lapKelasFilter','lapStatusFilter','lapDari','lapSampai'].forEach(function(id){
+  ['lapSearch','lapTipeFilter','lapKelasFilter','lapStatusFilter','lapDari','lapSampai'].forEach(function(id){
     document.getElementById(id).addEventListener('input', loadLaporanTable);
     document.getElementById(id).addEventListener('change', loadLaporanTable);
   });
@@ -903,23 +964,25 @@ function setLaporanPreset(daysBack){
 }
 async function loadLaporanTable(){
   const q = document.getElementById('lapSearch').value.trim();
+  const tipe = document.getElementById('lapTipeFilter').value;
   const kelas = document.getElementById('lapKelasFilter').value;
   const status = document.getElementById('lapStatusFilter').value;
   const dariTanggal = document.getElementById('lapDari').value;
   const sampaiTanggal = document.getElementById('lapSampai').value;
-  const r = await api('laporan', { q, kelas, status, dariTanggal, sampaiTanggal, kelasGuru: kelas });
+  const r = await api('laporan', { q, tipe, kelas, status, dariTanggal, sampaiTanggal, kelasGuru: kelas });
   window.__laporanCache = r.ok ? r.data : [];
   const tbody = document.getElementById('lapTableBody');
-  if(!r.ok || r.data.length===0){ tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">Tidak ada data laporan pada rentang ini.</div></td></tr>'; return; }
+  if(!r.ok || r.data.length===0){ tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Tidak ada data laporan pada rentang ini.</div></td></tr>'; return; }
   tbody.innerHTML = r.data.map(function(p,i){
-    return '<tr><td>'+(i+1)+'</td><td>'+formatTanggalIndo(p.Tanggal)+'</td><td><strong>'+p.Nama+'</strong></td><td>'+p.Kelas+'</td><td style="font-family:var(--font-mono)">'+p.Jam+'</td><td>'+statusBadge(p.Status)+'</td></tr>';
+    const statusTampil = p.Status==='PULANG' ? '<span class="badge badge-izin"><span class="badge-dot"></span>PULANG</span>' : statusBadge(p.Status);
+    return '<tr><td>'+(i+1)+'</td><td>'+formatTanggalIndo(p.Tanggal)+'</td><td><strong>'+p.Nama+'</strong></td><td>'+p.Kelas+'</td><td>'+(p.Tipe||'MASUK')+'</td><td style="font-family:var(--font-mono)">'+p.Jam+'</td><td>'+statusTampil+'</td></tr>';
   }).join('');
 }
 function exportCsv(){
   const rows = window.__laporanCache || [];
   if(rows.length===0){ toast('Tidak ada data untuk diexport','err'); return; }
-  let csv = 'Tanggal,Nama,NISN,Kelas,Jam,Status,Keterangan\n';
-  rows.forEach(function(p){ csv += [p.Tanggal,p.Nama,p.NISN,p.Kelas,p.Jam,p.Status,p.Keterangan||''].join(',') + '\n'; });
+  let csv = 'Tanggal,Nama,NISN,Kelas,Jenis,Jam,Status,Keterangan\n';
+  rows.forEach(function(p){ csv += [p.Tanggal,p.Nama,p.NISN,p.Kelas,p.Tipe||'MASUK',p.Jam,p.Status,p.Keterangan||''].join(',') + '\n'; });
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -968,6 +1031,7 @@ async function renderPengaturan(){
   content.innerHTML =
     '<div class="tab-row">' +
       '<button class="tab-btn" data-tab="umum" onclick="switchPengaturanTab(\'umum\')">Umum</button>' +
+      '<button class="tab-btn" data-tab="jadwal" onclick="switchPengaturanTab(\'jadwal\')">Jadwal Mingguan</button>' +
       '<button class="tab-btn" data-tab="pengguna" onclick="switchPengaturanTab(\'pengguna\')">Pengguna</button>' +
       '<button class="tab-btn" data-tab="log" onclick="switchPengaturanTab(\'log\')">Log Aktivitas</button>' +
     '</div>' +
@@ -978,6 +1042,7 @@ function switchPengaturanTab(tab){
   pengaturanTab = tab;
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===tab); });
   if(tab==='umum') loadPengaturanUmum();
+  else if(tab==='jadwal') loadPengaturanJadwal();
   else if(tab==='pengguna') loadPengaturanPengguna();
   else loadPengaturanLog();
 }
@@ -987,19 +1052,58 @@ async function loadPengaturanUmum(){
   document.getElementById('pengaturanBody').innerHTML =
     '<div class="card" style="padding:22px; max-width:520px;">' +
       '<div class="field"><label>Nama Sekolah</label><input id="pNama" value="'+(p.NAMA_SEKOLAH||'')+'"></div>' +
-      '<div class="field"><label>Jam Masuk Sekolah</label><input type="time" id="pJamMasuk" value="'+(p.JAM_MASUK||'07:00')+'"></div>' +
-      '<div class="field"><label>Batas Keterlambatan</label><input type="time" id="pBatas" value="'+(p.BATAS_TERLAMBAT||'07:30')+'"><span class="field-hint">Scan setelah jam ini otomatis berstatus TERLAMBAT.</span></div>' +
       '<div class="field"><label>Tahun Pelajaran</label><input id="pTahun" value="'+(p.TAHUN_PELAJARAN||'')+'"></div>' +
       '<div class="field"><label>Semester</label><select id="pSemester"><option'+(p.SEMESTER==='Ganjil'?' selected':'')+'>Ganjil</option><option'+(p.SEMESTER==='Genap'?' selected':'')+'>Genap</option></select></div>' +
       '<div class="field"><label>Notifikasi WhatsApp ke Wali</label><select id="pWa"><option value="TIDAK"'+(p.WA_AKTIF==='TIDAK'?' selected':'')+'>Nonaktif</option><option value="YA"'+(p.WA_AKTIF==='YA'?' selected':'')+'>Aktif</option></select><span class="field-hint">Aktifkan setelah kredensial WhatsApp Business API dikonfigurasi di Apps Script.</span></div>' +
       '<button class="btn btn-accent" onclick="saveePengaturan()">Simpan Pengaturan</button>' +
-    '</div>';
+    '</div>' +
+    '<div class="field-hint" style="margin-top:12px;">Jam masuk, batas terlambat, jam pulang, dan hari libur diatur per hari di tab <strong>Jadwal Mingguan</strong>.</div>';
 }
 async function saveePengaturan(){
   const r = await api('updatePengaturan', {
-    NAMA_SEKOLAH: val('pNama'), JAM_MASUK: val('pJamMasuk'), BATAS_TERLAMBAT: val('pBatas'),
+    NAMA_SEKOLAH: val('pNama'),
     TAHUN_PELAJARAN: val('pTahun'), SEMESTER: val('pSemester'), WA_AKTIF: val('pWa')
   });
+  toast(r.message, r.ok?'ok':'err');
+}
+async function loadPengaturanJadwal(){
+  const r = await api('getJadwalMingguan');
+  const jadwal = r.ok ? r.data : [];
+  window.__jadwalCache = jadwal;
+  document.getElementById('pengaturanBody').innerHTML =
+    '<div class="card" style="padding:20px;">' +
+      '<div class="section-title" style="margin-bottom:4px;">Jadwal Mingguan Presensi</div>' +
+      '<div class="section-sub" style="margin-bottom:16px;">Atur jam mulai presensi masuk, batas terlambat, jam mulai presensi pulang, dan hari libur untuk setiap hari.</div>' +
+      '<div class="table-wrap"><table><thead><tr><th>Hari</th><th>Libur</th><th>Mulai Masuk</th><th>Batas Terlambat</th><th>Mulai Pulang</th></tr></thead><tbody id="jadwalTableBody"></tbody></table></div>' +
+      '<button class="btn btn-accent" style="margin-top:16px;" onclick="saveJadwalMingguan()">Simpan Jadwal Mingguan</button>' +
+    '</div>';
+  const tbody = document.getElementById('jadwalTableBody');
+  tbody.innerHTML = jadwal.map(function(j, i){
+    const libur = String(j.Libur).toUpperCase()==='YA';
+    return '<tr data-hari="'+j.Hari+'">' +
+      '<td><strong>'+j.Hari+'</strong></td>' +
+      '<td><select id="jLibur'+i+'" onchange="toggleJadwalRow('+i+')"><option value="TIDAK"'+(!libur?' selected':'')+'>Sekolah</option><option value="YA"'+(libur?' selected':'')+'>Libur</option></select></td>' +
+      '<td><input type="time" id="jMasuk'+i+'" value="'+(j.Jam_Mulai_Masuk||'06:30')+'" '+(libur?'disabled':'')+'></td>' +
+      '<td><input type="time" id="jBatas'+i+'" value="'+(j.Jam_Batas_Terlambat||'07:30')+'" '+(libur?'disabled':'')+'></td>' +
+      '<td><input type="time" id="jPulang'+i+'" value="'+(j.Jam_Mulai_Pulang||'12:30')+'" '+(libur?'disabled':'')+'></td>' +
+    '</tr>';
+  }).join('');
+}
+function toggleJadwalRow(i){
+  const libur = document.getElementById('jLibur'+i).value==='YA';
+  ['jMasuk'+i,'jBatas'+i,'jPulang'+i].forEach(function(id){ document.getElementById(id).disabled = libur; });
+}
+async function saveJadwalMingguan(){
+  const jadwal = (window.__jadwalCache||[]).map(function(j, i){
+    return {
+      hari: j.Hari,
+      libur: document.getElementById('jLibur'+i).value,
+      jamMulaiMasuk: document.getElementById('jMasuk'+i).value,
+      jamBatasTerlambat: document.getElementById('jBatas'+i).value,
+      jamMulaiPulang: document.getElementById('jPulang'+i).value
+    };
+  });
+  const r = await api('updateJadwalMingguan', { jadwal: jadwal });
   toast(r.message, r.ok?'ok':'err');
 }
 async function loadPengaturanPengguna(){
