@@ -151,6 +151,12 @@ tbody tr:hover{background:var(--surface-2);}
 .user-menu button:hover{background:var(--surface-2);}
 
 #content{flex:1; padding:26px; max-width:1280px; width:100%; margin:0 auto;}
+#content.fade-in{animation:contentFade .16s ease;}
+@keyframes contentFade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+.loading-state{display:flex; align-items:center; justify-content:center; gap:9px;}
+.spinner-sm{width:15px; height:15px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--green-600); animation:spin .7s linear infinite; display:inline-block;}
+.spinner-lg{width:28px; height:28px; border-radius:50%; border:3px solid rgba(255,255,255,.5); border-top-color:var(--navy-800); animation:spin .7s linear infinite; display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
 .view-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:14px; margin-bottom:22px;}
 
 /* ---------- Overlay sidebar mobile ---------- */
@@ -375,7 +381,7 @@ tbody tr:hover{background:var(--surface-2);}
  * Tempelkan URL Web App Apps Script Anda (didapat setelah Deploy > New
  * deployment > Web app, lihat Tahap 6 pada panduan instalasi).
  * ===================================================================== */
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzEpMJKHGJRlCCaZOfGPkCyjNUTzJ2ETUOumk-zVaJvsItuJKvUCLUm60r8e2vJk2ayng/exec';
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwO3o1ivAdg-TVx3H9XZ3mHj5TPmZZdOC9BouaOLQJ3_Cztt6e9gz6fgBkIdgGewka8GQ/exec';
 
 /* ---------------------------------------------------------------------
  * STATE
@@ -430,6 +436,40 @@ function toast(msg, type){
   el.textContent = msg;
   document.getElementById('toastContainer').appendChild(el);
   setTimeout(()=>el.remove(), 3200);
+}
+
+/* ---------------------------------------------------------------------
+ * PERFORMA / RESPONSIVITAS
+ * - debounce: mencegah kotak pencarian memanggil API di setiap ketukan
+ *   tombol (dulu ini yang bikin ganti menu/filter terasa berat).
+ * - bindFilters: 'input' didebounce (mengetik), 'change' langsung
+ *   (pilih dropdown/tanggal tetap terasa instan).
+ * - showTableSkeleton / skeletonRow: kasih feedback "Memuat..." SEKETIKA
+ *   saat pindah menu/filter, alih-alih tabel kosong/diam sesaat.
+ * ------------------------------------------------------------------- */
+function debounce(fn, delay){
+  let t;
+  return function(){
+    const args = arguments;
+    clearTimeout(t);
+    t = setTimeout(function(){ fn.apply(null, args); }, delay || 350);
+  };
+}
+function bindFilters(ids, handler){
+  const debounced = debounce(handler, 350);
+  ids.forEach(function(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', debounced);
+    el.addEventListener('change', handler);
+  });
+}
+function skeletonRow(colspan){
+  return '<tr><td colspan="'+colspan+'"><div class="empty-state loading-state"><span class="spinner-sm"></span> Memuat data...</div></td></tr>';
+}
+function showTableSkeleton(containerId){
+  const el = document.getElementById(containerId);
+  if(el) el.innerHTML = '<div class="empty-state loading-state"><span class="spinner-sm"></span> Memuat...</div>';
 }
 
 /* ---------------------------------------------------------------------
@@ -560,6 +600,13 @@ async function navigateTo(view){
   document.getElementById('pageTitle').textContent = MENU_LABEL[view];
   setActiveNav(view);
   toggleSidebar(false);
+
+  const content = document.getElementById('content');
+  content.classList.remove('fade-in');
+  content.innerHTML = '<div class="empty-state loading-state" style="padding:90px 0;"><span class="spinner-sm"></span> Memuat halaman...</div>';
+  void content.offsetWidth;
+  content.classList.add('fade-in');
+
   if(scannerInstance && view!=='scan'){ try{ await scannerInstance.stop(); }catch(e){} scannerInstance=null; }
   if(kelasCache.length===0){ const r = await api('daftarKelas'); if(r.ok) kelasCache = r.data; }
 
@@ -593,10 +640,7 @@ async function renderDashboard(){
     '</div>';
 
   document.getElementById('dashDateLabel').textContent = formatTanggalIndo(todayStr());
-  ['dashSearch','dashTipeFilter','dashKelasFilter','dashStatusFilter'].forEach(function(id){
-    document.getElementById(id).addEventListener('input', loadDashboardTable);
-    document.getElementById(id).addEventListener('change', loadDashboardTable);
-  });
+  bindFilters(['dashSearch','dashTipeFilter','dashKelasFilter','dashStatusFilter'], loadDashboardTable);
 
   loadDashboardStats();
   loadDashboardTable();
@@ -619,16 +663,18 @@ async function loadDashboardStats(){
     return '<div class="stat-card" style="--stat-color:'+c.color+'; --stat-bg:'+c.bg+'"><div class="stat-icon">'+icon(c.ic,16)+'</div><div class="stat-num">'+c.num+'</div><div class="stat-label">'+c.label+'</div></div>';
   }).join('');
   const dateLabel = document.getElementById('dashDateLabel');
-  if(dateLabel) dateLabel.textContent = formatTanggalIndo(todayStr()) + (r.libur ? ' — Hari Libur' : '');
+  if(dateLabel) dateLabel.textContent = formatTanggalIndo(todayStr()) + (r.libur ? (' — Libur (' + (r.alasanLibur||'Libur') + ')') : '');
 }
 
 async function loadDashboardTable(){
+  const tbody = document.getElementById('dashTableBody');
+  if(tbody) tbody.innerHTML = skeletonRow(5);
   const q = document.getElementById('dashSearch').value.trim();
   const tipe = document.getElementById('dashTipeFilter').value;
   const kelas = document.getElementById('dashKelasFilter').value;
   const status = document.getElementById('dashStatusFilter').value;
   const r = await api('presensiHariIni', { tanggal: todayStr(), tipe, q, kelas, status, kelasGuru: kelas });
-  const tbody = document.getElementById('dashTableBody');
+  if(!tbody) return;
   if(!r.ok || r.data.length===0){ tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Belum ada data presensi yang cocok.</div></td></tr>'; return; }
   tbody.innerHTML = r.data.map(function(p, i){
     const statusTampil = p.Status==='PULANG' ? '<span class="badge badge-izin"><span class="badge-dot"></span>PULANG</span>' : statusBadge(p.Status);
@@ -669,7 +715,7 @@ function renderScanScreen(){
         '<div class="section-sub">Arahkan kamera ke QR Code pada kartu siswa.</div>' +
         '<div class="scan-frame" style="margin-top:16px;"><div id="qrReader"></div><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div></div>' +
         '<div class="scan-status-row"><span class="scan-status-dot" id="camDot"></span><span id="camStatusText">Menyiapkan kamera...</span></div>' +
-        '<div class="manual-scan"><input id="manualQrInput" placeholder="atau ketik QR_ID manual, mis. SD005-001" class="field-input"><button class="btn btn-ghost" onclick="submitManualScan()">Kirim</button></div>' +
+        '<div class="manual-scan"><input id="manualQrInput" placeholder="atau ketik QR_ID manual, mis. SD005-001" class="field-input"><button class="btn btn-ghost" id="manualScanBtn" onclick="submitManualScan()">Kirim</button></div>' +
       '</div>' +
       '<div class="card result-panel">' +
         '<div class="result-clock"><div class="time" id="resultClockTime">--:--:--</div><div class="date" id="resultClockDate">-</div></div>' +
@@ -709,7 +755,7 @@ async function refreshScanCount(){
   const banner = document.getElementById('liburBanner');
   const bannerText = document.getElementById('liburBannerText');
   if(banner && bannerText){
-    if(r.libur){ bannerText.textContent = 'Hari ini ('+r.hari+') libur — presensi tidak tersedia.'; banner.hidden = false; }
+    if(r.libur){ bannerText.textContent = 'Hari ini ('+r.hari+') libur — '+(r.alasan||'presensi tidak tersedia')+'.'; banner.hidden = false; }
     else{ banner.hidden = true; }
   }
 }
@@ -731,14 +777,25 @@ function startScanner(){
 function onScanSuccess(decodedText){
   if(scannerLock) return;
   scannerLock = true;
+  showScanLoading();
   processScan(decodedText).finally(function(){ setTimeout(function(){ scannerLock=false; }, 1800); });
 }
 function submitManualScan(){
   const input = document.getElementById('manualQrInput');
+  const btn = document.getElementById('manualScanBtn');
   const val = input.value.trim();
-  if(!val) return;
+  if(!val || (btn && btn.disabled)) return;
   input.value='';
-  processScan(val);
+  showScanLoading();
+  if(btn) btn.disabled = true;
+  processScan(val).finally(function(){ if(btn) btn.disabled = false; });
+}
+
+function showScanLoading(){
+  const box = document.getElementById('resultBox');
+  if(!box) return;
+  box.className = 'result-box idle';
+  box.innerHTML = '<span class="spinner-lg"></span><div class="r-title" style="margin-top:14px;">Memproses...</div>';
 }
 
 async function processScan(qrId){
@@ -811,19 +868,18 @@ async function renderSiswa(){
       '</div>' +
       '<div class="table-wrap"><table><thead><tr><th>No</th><th>Nama</th><th>NISN</th><th>Kelas</th><th>QR_ID</th><th>Status</th><th></th></tr></thead><tbody id="siswaTableBody"></tbody></table></div>' +
     '</div>';
-  ['siswaSearch','siswaKelasFilter','siswaStatusFilter'].forEach(function(id){
-    document.getElementById(id).addEventListener('input', loadSiswaTable);
-    document.getElementById(id).addEventListener('change', loadSiswaTable);
-  });
+  bindFilters(['siswaSearch','siswaKelasFilter','siswaStatusFilter'], loadSiswaTable);
   loadSiswaTable();
 }
 
 async function loadSiswaTable(){
+  const tbody = document.getElementById('siswaTableBody');
+  if(tbody) tbody.innerHTML = skeletonRow(7);
   const q = document.getElementById('siswaSearch').value.trim();
   const kelas = document.getElementById('siswaKelasFilter').value;
   const status = document.getElementById('siswaStatusFilter').value;
   const r = await api('siswaList', { q, kelas, status, kelasGuru: kelas });
-  const tbody = document.getElementById('siswaTableBody');
+  if(!tbody) return;
   if(!r.ok || r.data.length===0){ tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Tidak ada data siswa yang cocok.</div></td></tr>'; return; }
   const isAdmin = currentUser.role==='ADMIN';
   window.__siswaCache = r.data;
@@ -899,19 +955,18 @@ async function renderRekap(){
       '</div>' +
       '<div class="table-wrap"><table><thead><tr><th>No</th><th>Nama</th><th>Kelas</th><th>Hadir</th><th>Terlambat</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>Pulang</th><th>% Kehadiran</th></tr></thead><tbody id="rekapTableBody"></tbody></table></div>' +
     '</div>';
-  ['rekapSearch','rekapKelasFilter','rekapDari','rekapSampai'].forEach(function(id){
-    document.getElementById(id).addEventListener('input', loadRekapTable);
-    document.getElementById(id).addEventListener('change', loadRekapTable);
-  });
+  bindFilters(['rekapSearch','rekapKelasFilter','rekapDari','rekapSampai'], loadRekapTable);
   loadRekapTable();
 }
 async function loadRekapTable(){
+  const tbody = document.getElementById('rekapTableBody');
+  if(tbody) tbody.innerHTML = skeletonRow(10);
   const q = document.getElementById('rekapSearch').value.trim();
   const kelas = document.getElementById('rekapKelasFilter').value;
   const dariTanggal = document.getElementById('rekapDari').value;
   const sampaiTanggal = document.getElementById('rekapSampai').value;
   const r = await api('rekapSiswa', { q, kelas, dariTanggal, sampaiTanggal });
-  const tbody = document.getElementById('rekapTableBody');
+  if(!tbody) return;
   if(!r.ok || r.data.length===0){ tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state">Tidak ada data rekap.</div></td></tr>'; return; }
   tbody.innerHTML = r.data.map(function(s,i){
     return '<tr><td>'+(i+1)+'</td><td><strong>'+s.nama+'</strong></td><td>'+s.kelas+'</td><td>'+s.hadir+'</td><td>'+s.terlambat+'</td><td>'+s.izin+'</td><td>'+s.sakit+'</td><td>'+s.alpa+'</td><td>'+s.pulang+'</td>' +
@@ -950,10 +1005,7 @@ async function renderLaporan(){
         '<div class="table-wrap"><table><thead><tr><th>No</th><th>Tanggal</th><th>Nama</th><th>Kelas</th><th>Jenis</th><th>Jam</th><th>Status</th></tr></thead><tbody id="lapTableBody"></tbody></table></div>' +
       '</div>' +
     '</div>';
-  ['lapSearch','lapTipeFilter','lapKelasFilter','lapStatusFilter','lapDari','lapSampai'].forEach(function(id){
-    document.getElementById(id).addEventListener('input', loadLaporanTable);
-    document.getElementById(id).addEventListener('change', loadLaporanTable);
-  });
+  bindFilters(['lapSearch','lapTipeFilter','lapKelasFilter','lapStatusFilter','lapDari','lapSampai'], loadLaporanTable);
   loadLaporanTable();
 }
 function setLaporanPreset(daysBack){
@@ -963,6 +1015,8 @@ function setLaporanPreset(daysBack){
   loadLaporanTable();
 }
 async function loadLaporanTable(){
+  const tbody = document.getElementById('lapTableBody');
+  if(tbody) tbody.innerHTML = skeletonRow(7);
   const q = document.getElementById('lapSearch').value.trim();
   const tipe = document.getElementById('lapTipeFilter').value;
   const kelas = document.getElementById('lapKelasFilter').value;
@@ -971,7 +1025,7 @@ async function loadLaporanTable(){
   const sampaiTanggal = document.getElementById('lapSampai').value;
   const r = await api('laporan', { q, tipe, kelas, status, dariTanggal, sampaiTanggal, kelasGuru: kelas });
   window.__laporanCache = r.ok ? r.data : [];
-  const tbody = document.getElementById('lapTableBody');
+  if(!tbody) return;
   if(!r.ok || r.data.length===0){ tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Tidak ada data laporan pada rentang ini.</div></td></tr>'; return; }
   tbody.innerHTML = r.data.map(function(p,i){
     const statusTampil = p.Status==='PULANG' ? '<span class="badge badge-izin"><span class="badge-dot"></span>PULANG</span>' : statusBadge(p.Status);
@@ -1032,6 +1086,7 @@ async function renderPengaturan(){
     '<div class="tab-row">' +
       '<button class="tab-btn" data-tab="umum" onclick="switchPengaturanTab(\'umum\')">Umum</button>' +
       '<button class="tab-btn" data-tab="jadwal" onclick="switchPengaturanTab(\'jadwal\')">Jadwal Mingguan</button>' +
+      '<button class="tab-btn" data-tab="kalender" onclick="switchPengaturanTab(\'kalender\')">Kalender Libur</button>' +
       '<button class="tab-btn" data-tab="pengguna" onclick="switchPengaturanTab(\'pengguna\')">Pengguna</button>' +
       '<button class="tab-btn" data-tab="log" onclick="switchPengaturanTab(\'log\')">Log Aktivitas</button>' +
     '</div>' +
@@ -1041,8 +1096,10 @@ async function renderPengaturan(){
 function switchPengaturanTab(tab){
   pengaturanTab = tab;
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===tab); });
+  showTableSkeleton('pengaturanBody');
   if(tab==='umum') loadPengaturanUmum();
   else if(tab==='jadwal') loadPengaturanJadwal();
+  else if(tab==='kalender') loadPengaturanKalender();
   else if(tab==='pengguna') loadPengaturanPengguna();
   else loadPengaturanLog();
 }
@@ -1105,6 +1162,79 @@ async function saveJadwalMingguan(){
   });
   const r = await api('updateJadwalMingguan', { jadwal: jadwal });
   toast(r.message, r.ok?'ok':'err');
+}
+
+const BULAN_OPSI = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+const JENIS_LIBUR_BADGE = { 'Cuti Bersama':'terlambat', 'Libur Nasional':'alpa', 'Kegiatan Sekolah':'sakit', 'Lainnya':'izin' };
+
+async function loadPengaturanKalender(){
+  const now = jakartaNow();
+  window.__kalBulan = window.__kalBulan || String(now.getMonth()+1).padStart(2,'0');
+  window.__kalTahun = window.__kalTahun || String(now.getFullYear());
+
+  document.getElementById('pengaturanBody').innerHTML =
+    '<div class="card" style="padding:20px; margin-bottom:16px;">' +
+      '<div class="section-title" style="margin-bottom:4px;">Tambah Hari Libur</div>' +
+      '<div class="section-sub" style="margin-bottom:16px;">Cuti bersama & libur kegiatan sekolah sesuai kalender pembelajaran — berlaku untuk tanggal spesifik, di luar jadwal mingguan rutin.</div>' +
+      '<div class="settings-grid">' +
+        '<div class="field"><label>Tanggal</label><input type="date" id="kTanggal"></div>' +
+        '<div class="field"><label>Jenis</label><select id="kJenis"><option>Cuti Bersama</option><option>Libur Nasional</option><option>Kegiatan Sekolah</option><option>Lainnya</option></select></div>' +
+      '</div>' +
+      '<div class="field"><label>Keterangan</label><input id="kKeterangan" placeholder="mis. Cuti Bersama Idul Fitri, Class Meeting, Ujian Sekolah"></div>' +
+      '<button class="btn btn-accent" onclick="tambahLibur()">Tambah ke Kalender</button>' +
+    '</div>' +
+    '<div class="card" style="padding:20px;">' +
+      '<div class="view-head" style="margin-bottom:14px;">' +
+        '<div class="section-title">Daftar Hari Libur</div>' +
+        '<div class="toolbar">' +
+          '<select class="select-filter" id="kalBulanFilter"></select>' +
+          '<input class="select-filter" id="kalTahunFilter" style="width:90px;" value="'+window.__kalTahun+'">' +
+        '</div>' +
+      '</div>' +
+      '<div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Jenis</th><th>Keterangan</th><th></th></tr></thead><tbody id="kalenderTableBody"></tbody></table></div>' +
+    '</div>';
+
+  const bulanSelect = document.getElementById('kalBulanFilter');
+  const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  bulanSelect.innerHTML = BULAN_OPSI.map(function(b,i){ return '<option value="'+b+'"'+(b===window.__kalBulan?' selected':'')+'>'+namaBulan[i]+'</option>'; }).join('');
+  bulanSelect.addEventListener('change', function(){ window.__kalBulan = bulanSelect.value; loadKalenderTable(); });
+  document.getElementById('kalTahunFilter').addEventListener('change', function(e){ window.__kalTahun = e.target.value.trim(); loadKalenderTable(); });
+
+  loadKalenderTable();
+}
+async function loadKalenderTable(){
+  const tbody = document.getElementById('kalenderTableBody');
+  if(!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Memuat data...</div></td></tr>';
+  const r = await api('kalenderLiburList', { bulan: window.__kalBulan, tahun: window.__kalTahun });
+  window.__kalenderCache = r.ok ? r.data : [];
+  if(!r.ok || r.data.length===0){ tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Belum ada hari libur untuk bulan ini.</div></td></tr>'; return; }
+  tbody.innerHTML = r.data.map(function(k){
+    const cls = JENIS_LIBUR_BADGE[k.Jenis] || 'izin';
+    return '<tr><td style="font-family:var(--font-mono)">'+formatTanggalIndo(k.Tanggal)+'</td>' +
+      '<td><span class="badge badge-'+cls+'"><span class="badge-dot"></span>'+k.Jenis+'</span></td>' +
+      '<td>'+(k.Keterangan||'-')+'</td>' +
+      '<td><button class="btn-icon" title="Hapus" onclick="hapusLibur(\''+k.ID+'\')">'+trashIcon()+'</button></td></tr>';
+  }).join('');
+}
+async function tambahLibur(){
+  const tanggal = val('kTanggal');
+  if(!tanggal){ toast('Tanggal wajib diisi','err'); return; }
+  const r = await api('kalenderLiburTambah', { tanggal: tanggal, jenis: val('kJenis'), keterangan: val('kKeterangan') });
+  if(!r.ok){ toast(r.message,'err'); return; }
+  toast(r.message,'ok');
+  document.getElementById('kTanggal').value=''; document.getElementById('kKeterangan').value='';
+  window.__kalBulan = tanggal.slice(5,7); window.__kalTahun = tanggal.slice(0,4);
+  loadPengaturanKalender();
+}
+function hapusLibur(id){
+  openModal('Hapus Hari Libur', '<p style="font-size:14.5px; color:var(--text-muted);">Yakin ingin menghapus hari libur ini dari kalender?</p>' +
+    '<div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Batal</button><button class="btn btn-danger-ghost" onclick="doHapusLibur(\''+id+'\')">Hapus</button></div>');
+}
+async function doHapusLibur(id){
+  const r = await api('kalenderLiburHapus', { id: id });
+  if(!r.ok){ toast(r.message,'err'); return; }
+  toast(r.message,'ok'); closeModal(); loadKalenderTable();
 }
 async function loadPengaturanPengguna(){
   const r = await api('userList');
