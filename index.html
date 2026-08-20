@@ -255,6 +255,15 @@ tbody tr:hover{background:var(--surface-2);}
 .tab-btn{border:none; background:none; padding:8px 16px; border-radius:var(--radius-pill); font-size:13.5px; font-weight:700; color:var(--text-muted);}
 .tab-btn.active{background:var(--navy-800); color:#fff;}
 
+/* ---------- Toggle switch (Jam Aktif Mingguan) ---------- */
+.switch{position:relative; display:inline-block; width:40px; height:23px; vertical-align:middle;}
+.switch input{opacity:0; width:0; height:0; position:absolute;}
+.switch-slider{position:absolute; cursor:pointer; inset:0; background:var(--slate-100); border:1.5px solid var(--border); transition:.15s; border-radius:999px;}
+.switch-slider:before{content:''; position:absolute; height:15px; width:15px; left:2px; top:2px; background:#fff; transition:.15s; border-radius:50%; box-shadow:0 1px 2px rgba(22,40,60,.25);}
+.switch input:checked + .switch-slider{background:var(--green-600); border-color:var(--green-600);}
+.switch input:checked + .switch-slider:before{transform:translateX(17px);}
+.switch-label{font-size:12.5px; font-weight:700; color:var(--text-muted); margin-left:6px; vertical-align:middle;}
+
 /* ---------- Print ---------- */
 @media print{
   body *{visibility:hidden;}
@@ -381,7 +390,7 @@ tbody tr:hover{background:var(--surface-2);}
  * Tempelkan URL Web App Apps Script Anda (didapat setelah Deploy > New
  * deployment > Web app, lihat Tahap 6 pada panduan instalasi).
  * ===================================================================== */
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwO3o1ivAdg-TVx3H9XZ3mHj5TPmZZdOC9BouaOLQJ3_Cztt6e9gz6fgBkIdgGewka8GQ/exec';
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxovFPwfRsYHX3ziG5nJUpYiXu_yX9Mn5ZVKiei0ue2eLG8XOX3VQ6XueuSapbdNkLtWQ/exec';
 
 /* ---------------------------------------------------------------------
  * STATE
@@ -1085,7 +1094,7 @@ async function renderPengaturan(){
   content.innerHTML =
     '<div class="tab-row">' +
       '<button class="tab-btn" data-tab="umum" onclick="switchPengaturanTab(\'umum\')">Umum</button>' +
-      '<button class="tab-btn" data-tab="jadwal" onclick="switchPengaturanTab(\'jadwal\')">Jadwal Mingguan</button>' +
+      '<button class="tab-btn" data-tab="jadwal" onclick="switchPengaturanTab(\'jadwal\')">Jam Aktif Mingguan</button>' +
       '<button class="tab-btn" data-tab="kalender" onclick="switchPengaturanTab(\'kalender\')">Kalender Libur</button>' +
       '<button class="tab-btn" data-tab="pengguna" onclick="switchPengaturanTab(\'pengguna\')">Pengguna</button>' +
       '<button class="tab-btn" data-tab="log" onclick="switchPengaturanTab(\'log\')">Log Aktivitas</button>' +
@@ -1129,39 +1138,46 @@ async function loadPengaturanJadwal(){
   window.__jadwalCache = jadwal;
   document.getElementById('pengaturanBody').innerHTML =
     '<div class="card" style="padding:20px;">' +
-      '<div class="section-title" style="margin-bottom:4px;">Jadwal Mingguan Presensi</div>' +
-      '<div class="section-sub" style="margin-bottom:16px;">Atur jam mulai presensi masuk, batas terlambat, jam mulai presensi pulang, dan hari libur untuk setiap hari.</div>' +
-      '<div class="table-wrap"><table><thead><tr><th>Hari</th><th>Libur</th><th>Mulai Masuk</th><th>Batas Terlambat</th><th>Mulai Pulang</th></tr></thead><tbody id="jadwalTableBody"></tbody></table></div>' +
-      '<button class="btn btn-accent" style="margin-top:16px;" onclick="saveJadwalMingguan()">Simpan Jadwal Mingguan</button>' +
+      '<div class="section-title" style="margin-bottom:4px;">Jam Aktif Sekolah Mingguan</div>' +
+      '<div class="section-sub" style="margin-bottom:16px;">Pilih hari sekolah aktif dan atur jam mulai presensi masuk, batas terlambat, serta jam mulai presensi pulang. Hari yang dinonaktifkan otomatis diperlakukan sebagai libur — presensi tidak tersedia di hari itu.</div>' +
+      '<div class="table-wrap"><table><thead><tr><th>Hari</th><th>Sekolah Aktif</th><th>Mulai Masuk</th><th>Batas Terlambat</th><th>Mulai Pulang</th></tr></thead><tbody id="jadwalTableBody"></tbody></table></div>' +
+      '<button class="btn btn-accent" style="margin-top:16px;" onclick="saveJadwalMingguan()">Simpan Jam Aktif Mingguan</button>' +
     '</div>';
   const tbody = document.getElementById('jadwalTableBody');
   tbody.innerHTML = jadwal.map(function(j, i){
-    const libur = String(j.Libur).toUpperCase()==='YA';
+    const aktif = String(j.Libur).toUpperCase()!=='YA';
     return '<tr data-hari="'+j.Hari+'">' +
       '<td><strong>'+j.Hari+'</strong></td>' +
-      '<td><select id="jLibur'+i+'" onchange="toggleJadwalRow('+i+')"><option value="TIDAK"'+(!libur?' selected':'')+'>Sekolah</option><option value="YA"'+(libur?' selected':'')+'>Libur</option></select></td>' +
-      '<td><input type="time" id="jMasuk'+i+'" value="'+(j.Jam_Mulai_Masuk||'06:30')+'" '+(libur?'disabled':'')+'></td>' +
-      '<td><input type="time" id="jBatas'+i+'" value="'+(j.Jam_Batas_Terlambat||'07:30')+'" '+(libur?'disabled':'')+'></td>' +
-      '<td><input type="time" id="jPulang'+i+'" value="'+(j.Jam_Mulai_Pulang||'12:30')+'" '+(libur?'disabled':'')+'></td>' +
+      '<td><label class="switch"><input type="checkbox" id="jAktif'+i+'" '+(aktif?'checked':'')+' onchange="toggleJadwalRow('+i+')"><span class="switch-slider"></span></label> <span class="switch-label" id="jAktifLabel'+i+'">'+(aktif?'Aktif':'Libur')+'</span></td>' +
+      '<td><input type="time" id="jMasuk'+i+'" value="'+(j.Jam_Mulai_Masuk||'06:30')+'" '+(aktif?'':'disabled')+'></td>' +
+      '<td><input type="time" id="jBatas'+i+'" value="'+(j.Jam_Batas_Terlambat||'07:30')+'" '+(aktif?'':'disabled')+'></td>' +
+      '<td><input type="time" id="jPulang'+i+'" value="'+(j.Jam_Mulai_Pulang||'12:30')+'" '+(aktif?'':'disabled')+'></td>' +
     '</tr>';
   }).join('');
 }
 function toggleJadwalRow(i){
-  const libur = document.getElementById('jLibur'+i).value==='YA';
-  ['jMasuk'+i,'jBatas'+i,'jPulang'+i].forEach(function(id){ document.getElementById(id).disabled = libur; });
+  const aktif = document.getElementById('jAktif'+i).checked;
+  ['jMasuk'+i,'jBatas'+i,'jPulang'+i].forEach(function(id){ document.getElementById(id).disabled = !aktif; });
+  const label = document.getElementById('jAktifLabel'+i);
+  if(label) label.textContent = aktif ? 'Aktif' : 'Libur';
 }
 async function saveJadwalMingguan(){
-  const jadwal = (window.__jadwalCache||[]).map(function(j, i){
+  const cache = window.__jadwalCache || [];
+  const jadwal = cache.map(function(j, i){
+    const aktif = document.getElementById('jAktif'+i).checked;
+    // Data lama tetap dipakai sebagai cadangan kalau field kebetulan kosong,
+    // supaya jam yang sudah pernah diisi tidak pernah hilang saat disimpan.
     return {
       hari: j.Hari,
-      libur: document.getElementById('jLibur'+i).value,
-      jamMulaiMasuk: document.getElementById('jMasuk'+i).value,
-      jamBatasTerlambat: document.getElementById('jBatas'+i).value,
-      jamMulaiPulang: document.getElementById('jPulang'+i).value
+      libur: aktif ? 'TIDAK' : 'YA',
+      jamMulaiMasuk: document.getElementById('jMasuk'+i).value || j.Jam_Mulai_Masuk || '06:30',
+      jamBatasTerlambat: document.getElementById('jBatas'+i).value || j.Jam_Batas_Terlambat || '07:30',
+      jamMulaiPulang: document.getElementById('jPulang'+i).value || j.Jam_Mulai_Pulang || '12:30'
     };
   });
   const r = await api('updateJadwalMingguan', { jadwal: jadwal });
   toast(r.message, r.ok?'ok':'err');
+  if(r.ok) loadPengaturanJadwal();
 }
 
 const BULAN_OPSI = ['01','02','03','04','05','06','07','08','09','10','11','12'];
