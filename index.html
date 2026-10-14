@@ -5,41 +5,58 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0}
-header{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;background:#1e293b}
-h1{font-size:18px;margin:0}#clock{font-size:22px;font-weight:700;color:#38bdf8}
-button{cursor:pointer;border:0;border-radius:8px;padding:8px 14px;background:#2563eb;color:#fff;font-size:14px}
-button.g{background:#475569}button.r{background:#dc2626}
-input,select,textarea{padding:8px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;width:100%;font:inherit}
-#scan{max-width:520px;margin:16px auto;padding:0 12px;text-align:center}
-#reader{border-radius:12px;overflow:hidden;background:#000;min-height:200px}
-.res{margin:12px 0;padding:16px;border-radius:12px;font-size:18px;background:#1e293b}
-.res.ok{background:#166534}.res.warn{background:#b45309}.res.err{background:#991b1b}
-#recent{text-align:left;font-size:14px;color:#94a3b8}
-#adm{display:none;position:fixed;inset:0;background:#f1f5f9;color:#0f172a;overflow:auto;z-index:5}
-#adm header{background:#0f172a;color:#fff;flex-wrap:wrap;gap:8px}
-nav button{background:#334155;margin:2px}nav button.on{background:#2563eb}
-.tab{display:none;padding:16px;max-width:1000px;margin:auto}.tab.on{display:block}
-.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.row>*{flex:1;min-width:130px}
-table{width:100%;border-collapse:collapse;background:#fff;font-size:13px}
-td,th{border:1px solid #cbd5e1;padding:5px 7px;text-align:left}th{background:#e2e8f0}
-#login{display:none;position:fixed;inset:0;background:#000a;z-index:9;align-items:center;justify-content:center}
-#login div{background:#fff;color:#0f172a;padding:20px;border-radius:12px;width:300px}
-#login input{margin:6px 0;background:#fff;color:#0f172a}
+:root{--bg:#f6f7f9;--card:#fff;--tx:#111827;--mu:#6b7280;--bd:#e5e7eb;--ac:#4f46e5;--ok:#16a34a;--wn:#d97706;--er:#dc2626}
+@media(prefers-color-scheme:dark){:root{--bg:#0b0d12;--card:#14171f;--tx:#f3f4f6;--mu:#9ca3af;--bd:#252a36;--ac:#818cf8}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx)}
+h1{font-size:18px;margin:0;font-weight:650}h3{margin:20px 0 8px;font-size:16px}h4{margin:16px 0 8px;font-size:14px;color:var(--mu);font-weight:600}
+.mu,small{color:var(--mu);font-size:13px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--bd)}
+#clock{font-size:26px;font-weight:650;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+button{cursor:pointer;border:0;border-radius:10px;padding:9px 16px;background:var(--ac);color:#fff;font-weight:500;font-size:14px;font-family:inherit;transition:.15s}
+button:hover{opacity:.9}button.g{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}button.r{background:transparent;color:var(--er);border:1px solid var(--bd)}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);font:inherit}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--ac) 35%,transparent);border-color:var(--ac)}
+label{display:block;margin:12px 0 4px;font-size:13px;color:var(--mu)}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:16px}
+#scan{display:grid;grid-template-columns:1.25fr 1fr;gap:20px;max-width:1040px;margin:24px auto;padding:0 16px}
+@media(max-width:780px){#scan{grid-template-columns:1fr}header{padding:12px 16px}}
+#reader{border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3}#reader video{width:100%!important;height:100%!important;object-fit:cover}
+.side{display:flex;flex-direction:column;gap:14px}
+.res{border-radius:18px;padding:22px;text-align:center;background:var(--card);border:1px solid var(--bd);min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:.2s}
+.res .ic{font-size:30px;width:56px;height:56px;line-height:56px;border-radius:50%;background:var(--bg);margin-bottom:6px}
+.res .nm{font-size:20px;font-weight:650}
+.res.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,var(--card))}.res.ok .ic{background:var(--ok);color:#fff}
+.res.warn{border-color:var(--wn);background:color-mix(in srgb,var(--wn) 10%,var(--card))}.res.warn .ic{background:var(--wn);color:#fff}
+.res.err{border-color:var(--er);background:color-mix(in srgb,var(--er) 10%,var(--card))}.res.err .ic{background:var(--er);color:#fff}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--bg);font-size:12px;font-weight:600;border:1px solid var(--bd)}
+.pill.okp{color:var(--ok)}.pill.erp{color:var(--er)}.wa{font-size:13px;color:var(--mu);margin-top:6px}
+#recent{font-size:13px;color:var(--mu);display:grid;gap:6px}#recent div{display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+#adm{display:none;position:fixed;inset:0;background:var(--bg);overflow:auto;z-index:5}
+#adm header{position:sticky;top:0;z-index:2}
+nav{display:flex;gap:4px;flex-wrap:wrap;background:var(--bg);padding:4px;border-radius:12px;border:1px solid var(--bd)}
+nav button{background:transparent;color:var(--mu);padding:7px 14px}nav button.on{background:var(--card);color:var(--tx);box-shadow:0 1px 3px #0002}
+.tab{display:none;padding:8px 20px 40px;max-width:1040px;margin:auto}.tab.on{display:block}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.row>*{flex:1;min-width:130px}.row>button{flex:0 0 auto}
+table{width:100%;border-collapse:collapse;background:var(--card);font-size:13px;border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+td,th{border-bottom:1px solid var(--bd);padding:9px 12px;text-align:left}th{color:var(--mu);font-weight:600;font-size:12px;background:var(--bg)}
+details{margin:8px 0}summary{cursor:pointer;color:var(--mu);font-size:13px}
+#login{display:none;position:fixed;inset:0;background:#0008;backdrop-filter:blur(4px);z-index:9;align-items:center;justify-content:center}
+#login>div{background:var(--card);padding:24px;border-radius:18px;width:320px;border:1px solid var(--bd)}#login input{margin:6px 0}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,86mm);gap:6mm}
 .card{width:86mm;height:54mm;border:1px solid #000;border-radius:3mm;padding:3mm;text-align:center;background:#fff;color:#000;break-inside:avoid}
-.card b{display:block;font-size:13px}.card small{display:block;font-size:11px}.card svg{width:100%;height:20mm}
+.card b{display:block;font-size:13px}.card small{display:block;font-size:11px;color:#000}.card svg{width:100%;height:20mm}
 @media print{body *{visibility:hidden}.pa,.pa *{visibility:visible}.pa{position:absolute;left:0;top:0;width:100%}}
 </style></head><body>
-<header><div><h1 id="sch">Presensi Siswa</h1><small>Arahkan barcode kartu ke kamera</small></div>
-<div id="clock"></div><button class="g" onclick="openLogin()">🔐 Admin</button></header>
+<header><div><h1 id="sch">Presensi Siswa</h1><div id="date" class="mu"></div></div><div id="clock"></div><button class="g" onclick="openLogin()">Masuk Admin</button></header>
 
-<div id="scan">
-  <div id="reader"></div>
-  <div class="res" id="res">Siap memindai…</div>
-  <input id="man" placeholder="Scanner USB / ketik NIS lalu Enter" autocomplete="off">
-  <h4 style="text-align:left">Pindaian terakhir</h4><div id="recent"></div>
-</div>
+<main id="scan">
+  <section class="box"><div id="reader"></div></section>
+  <section class="side">
+    <div class="res" id="res"><div class="ic">▣</div><div class="nm">Siap memindai</div><div class="mu">Arahkan barcode kartu ke kamera</div></div>
+    <input id="man" placeholder="Scanner USB / ketik NIS lalu Enter" autocomplete="off">
+    <div class="box"><h4 style="margin-top:0">Pindaian terakhir</h4><div id="recent"></div></div>
+  </section>
+</main>
 
 <div id="login"><div><h3>Login Admin</h3>
   <input id="lu" placeholder="Username"><input id="lp" type="password" placeholder="Password">
@@ -48,7 +65,7 @@ td,th{border:1px solid #cbd5e1;padding:5px 7px;text-align:left}th{background:#e2
 
 <div id="adm">
  <header><h1>Portal Admin</h1>
-  <nav><button data-t="t0" class="on">Hari Ini</button><button data-t="t1">Siswa</button><button data-t="t2">Rekap</button><button data-t="t3">Kartu</button><button data-t="t4">Pengaturan</button></nav>
+  <nav><button data-t="t0" class="on">Hari Ini</button><button data-t="t1">Siswa</button><button data-t="t2">Rekap</button><button data-t="t3">Kartu</button><button data-t="t4">Pengaturan</button><button data-t="t5">Log WA</button></nav>
   <button class="r" onclick="closeAdm()">Keluar</button></header>
 
  <div class="tab on" id="t0"><h3>Kehadiran Hari Ini</h3>
@@ -67,12 +84,16 @@ td,th{border:1px solid #cbd5e1;padding:5px 7px;text-align:left}th{background:#e2
  <div class="tab" id="t3"><h3>Cetak Kartu Absen</h3>
   <div class="row"><select id="ck"></select><button onclick="cards()">Buat Kartu</button><button class="g" onclick="printEl('cout')">Cetak</button></div><div id="cout" class="cards"></div></div>
 
+ <div class="tab" id="t5"><h3>Log WhatsApp</h3>
+  <div class="row"><input id="tn" placeholder="Nomor tes (08xxx)"><button class="g" onclick="doTest()">Kirim tes</button><button class="g" onclick="loadLog()">Muat ulang</button></div>
+  <small>Pesan dikirim otomatis saat scan; yang gagal dicoba ulang tiap menit (maks 3x).</small><div id="logout" style="margin-top:10px"></div></div>
+
  <div class="tab" id="t4"><h3>Pengaturan</h3><div id="cfg"></div><button onclick="saveCfg()">Simpan Pengaturan</button>
   <p><small>Placeholder pesan: {nama} {kelas} {sekolah} {tanggal} {jam} {menit}. Token Fonnte didapat dari dashboard Fonnte (perangkat WA harus terhubung).</small></p></div>
 </div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbxXURBCTLW7KdjooPrnTTepYsEqHAfiuNTca6HS8tUWCA5DJkbhXZgm4ulUIgeHiq_ZYQ/exec';
+const API = 'https://script.google.com/macros/s/AKfycbyGilMAf6qdHEYEzX4YOXUQaroZjlCTRWLRjelAmY6ZnNvmD9MChxnNlUCAzYcRuf5hlw/exec';
 let T = sessionStorage.t || '', D = { siswa: [], cfg: {} }, RK = [];
 const $ = i => document.getElementById(i);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -83,7 +104,10 @@ async function api(a, d = {}) {
     const j = await r.json(); if (j.auth) closeAdm(); return j;
   } catch (e) { return { ok: false, msg: 'Gagal terhubung: ' + e.message }; }
 }
-setInterval(() => $('clock').textContent = new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta' }), 1000);
+setInterval(() => {
+  const d = new Date(); $('clock').textContent = d.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta' });
+  $('date').textContent = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
+}, 1000);
 api('info').then(r => { if (r.ok) $('sch').textContent = r.sekolah; });
 
 /* ===== SCANNER ===== */
@@ -93,12 +117,19 @@ function beep(ok) {
 }
 async function onScan(code) {
   const n = Date.now(); if (code === last && n - lt < 4000) return; last = code; lt = n;
-  $('res').className = 'res'; $('res').textContent = 'Memproses…';
+  const b = $('res'); b.className = 'res'; b.innerHTML = '<div class="ic">…</div><div class="nm">Memproses</div>';
   const r = await api('scan', { nis: code });
-  $('res').className = 'res ' + (r.ok ? (r.status === 'Terlambat' ? 'warn' : 'ok') : 'err');
-  $('res').innerHTML = r.ok ? `<b>${esc(r.nama)}</b><br>${esc(r.kelas)} • ${r.type === 'masuk' ? 'MASUK' : 'PULANG'} ${r.jam}<br>${esc(r.status)}` : esc(r.msg);
-  hist.unshift(`${new Date().toLocaleTimeString('id-ID')} — ${r.ok ? esc(r.nama) + ' (' + r.type + ')' : esc(r.msg)}`);
-  $('recent').innerHTML = hist.slice(0, 8).join('<br>'); beep(r.ok);
+  b.className = 'res ' + (r.ok ? (r.status === 'Terlambat' ? 'warn' : 'ok') : 'err');
+  b.innerHTML = r.ok
+    ? `<div class="ic">${r.type === 'masuk' ? '→' : '←'}</div><div class="nm">${esc(r.nama)}</div><div>${esc(r.kelas)} · ${r.type === 'masuk' ? 'Masuk' : 'Pulang'} ${r.jam}</div><div class="pill">${esc(r.status)}</div><div class="wa">${r.wid ? 'Mengirim WhatsApp…' : ''}</div>`
+    : `<div class="ic">!</div><div class="nm">${esc(r.msg)}</div>`;
+  beep(r.ok);
+  hist.unshift(`<div><span>${esc(r.ok ? r.nama : r.msg)}</span><span>${r.ok ? (r.type === 'masuk' ? 'Masuk ' : 'Pulang ') + r.jam : ''}</span></div>`);
+  $('recent').innerHTML = hist.slice(0, 6).join('');
+  if (r.ok && r.wid) {
+    const w = b.querySelector('.wa');
+    api('kirim', { id: r.wid }).then(k => { if (document.contains(w)) w.textContent = k.ok ? '✓ WhatsApp terkirim' : '⏳ WhatsApp tertunda, dicoba ulang otomatis'; });
+  }
 }
 $('man').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.value.trim()) { onScan(e.target.value.trim()); e.target.value = ''; } });
 const F = Html5QrcodeSupportedFormats;
@@ -121,7 +152,7 @@ async function showAdm() {
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button,.tab').forEach(x => x.classList.remove('on'));
-  b.classList.add('on'); $(b.dataset.t).classList.add('on');
+  b.classList.add('on'); $(b.dataset.t).classList.add('on'); if (b.dataset.t === 't5') loadLog();
 });
 const kelasList = () => [...new Set(D.siswa.map(s => s.Kelas))].sort();
 function fillKelas() {
@@ -194,6 +225,15 @@ function cards() {
   $('cout').innerHTML = l.map((s, i) => `<div class="card"><b>${esc(D.cfg.nama_sekolah)}</b><small>KARTU PRESENSI</small><svg id="bc${i}"></svg><b>${esc(s.Nama)}</b><small>Kelas ${esc(s.Kelas)} • NIS ${esc(s.NIS)}</small></div>`).join('');
   l.forEach((s, i) => JsBarcode('#bc' + i, s.NIS, { format: 'CODE128', height: 50, fontSize: 12, margin: 0, displayValue: false }));
 }
+
+/* ===== LOG WA ===== */
+async function loadLog() {
+  const r = await api('logwa'); if (!r.ok) return;
+  $('logout').innerHTML = `<table><tr><th>Waktu</th><th>Nama</th><th>Nomor</th><th>Status</th><th>Info</th><th></th></tr>${r.rows.map(x =>
+    `<tr><td>${esc(x.Waktu)}</td><td>${esc(x.Nama)}</td><td>${esc(x.Nomor)}</td><td><span class="pill ${x.Status === 'Terkirim' ? 'okp' : x.Status === 'Gagal' ? 'erp' : ''}">${esc(x.Status)}</span></td><td>${esc(x.Respon)}</td><td>${x.Status === 'Gagal' ? `<button class="g" onclick="resend(${x.id})">Kirim ulang</button>` : ''}</td></tr>`).join('')}</table>`;
+}
+async function resend(id) { const r = await api('resend', { id }); alert(r.ok ? 'Terkirim' : (r.msg || 'Gagal')); loadLog(); }
+async function doTest() { const r = await api('testwa', { no: $('tn').value }); alert(r.ok ? 'Pesan tes terkirim' : (r.msg || 'Gagal')); loadLog(); }
 
 /* ===== PENGATURAN ===== */
 const CF = [['nama_sekolah', 'Nama sekolah'], ['jam_masuk', 'Batas jam masuk (lewat = terlambat, HH:MM)'], ['jam_pulang', 'Jam pulang paling awal (HH:MM)'],
